@@ -39,7 +39,9 @@ Terminalde aşağıdaki komutlar çalıştırılır:
 - [x] Video ingest ve metadata
 - [x] Oyuncu detection
 - [x] Oyuncu tracking
+- [x] Aşama 4A ReID altyapı hazırlığı (izole sn-reid-cpu + genel ReID smoke)
+- [ ] Aşama 4B track-level ReID / linking
 - [ ] Takım sınıflandırması
-- [ ] Re-identification
+- [ ] Kalıcı oyuncu re-identification ürün hattı
 - [ ] Kamera kalibrasyonu
 - [ ] Oyuncu metrikleri

@@ -213,15 +213,52 @@ Aşama 3 tamamlandı (temel ByteTrack tracking hattı):
   `football-cv-after-tracking.yml`
 - `unittest` 50 test OK (ingest + detection + tracking)
 
+Aşama 4A tamamlandı (SoccerNet ReID altyapı hazırlığı; ürün ReID kodu yok):
+
+- Dış repolar (ana `football-analytics` dışında, `~/projects/soccernet`):
+  - SoccerNet SDK:
+    `/home/enesturkoglu2/projects/soccernet/SoccerNet`
+    pin: `74461027ac2095ce2f8d4ee991eccb5dd5f42459`
+  - sn-reid (Torchreid fork):
+    `/home/enesturkoglu2/projects/soccernet/sn-reid`
+    pin: `621e2b0f2d2a7a3e207b8dd747542b6608bf72db`
+- İzole ortam: `sn-reid-cpu` (~1.7G)
+  - Python 3.10.20, torch 2.13.0+cpu, torchvision 0.28.0+cpu
+  - NumPy 2.2.6, OpenCV headless 5.0.0, CUDA False
+  - `football-cv` bu aşamada değiştirilmedi
+- Genel ReID checkpoint (SoccerNet-trained değil):
+  - Mimari: `osnet_x1_0`
+  - Eğitim: Market1501 same-domain person ReID (MODEL_ZOO)
+  - Yol: `/home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar`
+  - Boyut: 10 399 605 bytes
+  - SHA-256: `2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154`
+  - Load: `pretrained=False` + `load_pretrained_weights`; 565 eşleşen;
+    classifier 751→1 için 2 discard (beklenen); params 2 170 021
+- Gerçek crop → embedding smoke (`outputs/reid/smoke/`, Git dışı):
+  - track_id 463, frame 409, crop 58×114
+  - embedding `(512,)`, float32, L2 ≈ 1.0; repeat max abs 0.0
+  - FeatureExtractor kullanılmadı
+- Büyük SoccerNet ReID dataseti indirilmedi
+- SoccerNet SDK yalnız import bağımlılığı; `sample.mp4` için dataset aracı
+  zorunlu değil
+- Smoke kimlik doğruluğunu / track birleştirmeyi kanıtlamaz
+
+Kurulum kayıtları: `docs/setup/sn-reid-*.md` / `sn-reid-cpu-after-install.*`
+
 ## 8. Sıradaki aşama
 
-Aşama 4 yönü: kimlik sürekliliği ve re-identification hazırlığı.
+Aşama 4B: track-level ReID / linking hattı (henüz kod yok; ayrı onay).
 
-Temel ByteTrack geçici ID'leri fragmentedir. Sonraki mantıklı adım
-kimlik sürekliliğini iyileştirmek ve ReID hazırlığıdır.
-Henüz takım sınıflandırması veya SoccerNet kurulumu yok.
-Ayrı onay olmadan Aşama 4 kodu yazılmayacaktır.
-SoccerNet'e henüz geçilmedi.
+Beklenen yön:
+
+- Çoklu crop seçimi ve embedding
+- Track embedding aggregation
+- Similarity ve `global_candidate_id` eşleme
+- Ham ByteTrack `track_id` değerleri korunur; üzerine aday global kimlik
+  katmanı eklenir
+
+Bu aşama henüz aynı/farklı oyuncu başarısını ölçmez. Takım sınıflandırması
+ayrı bir adımdır. Ayrı onay olmadan 4B ürün kodu yazılmayacaktır.
 
 ## 9. Cursor için zorunlu kurallar
 
@@ -244,30 +281,28 @@ SoccerNet'e henüz geçilmedi.
 
 ## 10. SoccerNet durumu
 
-Henüz hiçbir SoccerNet reposu bu bilgisayarda kurulmadı veya klonlanmadı.
+Aşama 4A ile klonlanan / pinlenen dış repolar (ana repo dışında):
 
-Planlanan kullanım sırası:
+1. SoccerNet Python SDK — `74461027ac2095ce2f8d4ee991eccb5dd5f42459`
+2. sn-reid — `621e2b0f2d2a7a3e207b8dd747542b6608bf72db`
 
-1. SoccerNet Python SDK
-2. sn-trackeval
-3. sn-tracking
-4. sn-calibration
-5. sn-reid
-6. sn-jersey
-7. sn-gamestate
-8. sn-spotting
-9. sn-teamspotting
+Henüz kurulmayan / ertelenen adaylar (aynı anda kurulmayacak):
 
-Bu sıra proje ihtiyaçlarına göre değişebilir. Hepsi aynı anda kurulmayacaktır.
+- sn-trackeval, sn-tracking, sn-calibration, sn-jersey, sn-gamestate,
+  sn-spotting, sn-teamspotting
+
+Büyük SoccerNet datasetleri ve SoccerNet-trained ReID checkpoint
+indirilmedi. Checkpoint klasörü:
+`/home/enesturkoglu2/projects/soccernet/checkpoints/` (Git dışı).
 
 ## 11. Mevcut öncelik
 
-Öncelik SoccerNet kurulumu değil. SoccerNet henüz kurulmadı veya
-klonlanmadı. Sıradaki mantıklı iş kimlik sürekliliği ve
-re-identification hazırlığıdır (Aşama 4 yönü):
+Aşama 4A (ReID altyapı hazırlığı) tamamlandı. Sıradaki: Aşama 4B
+track-level ReID/linking (ayrı onay):
 
     Video okuma
     → İnsan/oyuncu tespiti (tamamlandı)
     → ByteTrack geçici takip (tamamlandı; fragmented)
-    → Kimlik sürekliliği / ReID hazırlığı
+    → ReID altyapı hazırlığı (4A tamamlandı)
+    → Track-level ReID / linking (4B)
     → İşaretlenmiş video
