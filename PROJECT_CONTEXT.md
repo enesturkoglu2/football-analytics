@@ -142,25 +142,24 @@ Aşama 0 tamamlandı:
 - GitHub SSH bağlantısı
 - İlk commit ve push
 
+Aşama 1 tamamlandı:
+
+- Video yolu doğrulama
+- FFprobe metadata (`outputs/ingest/ffprobe.json`)
+- OpenCV okunabilirlik ve ilk kare kontrolü
+- FPS, çözünürlük, kare sayısı, süre ve SHA-256
+- `outputs/ingest/video_manifest.json`
+- `--overwrite` koruması ve atomik JSON yazımı
+- `unittest` ile ingest testleri
+- Gerçek klip kabul testi: `data/test_clips/sample.mp4`
+
 ## 8. Sıradaki aşama
 
-Aşama 1: Video ingest ve metadata.
+Aşama 2: Temel oyuncu/insan tespiti.
 
-Bu aşamada:
-
-1. Kullanıcı tarafından verilen video doğrulanacak.
-2. FFprobe ile metadata alınacak.
-3. OpenCV ile videonun okunabilirliği kontrol edilecek.
-4. FPS, çözünürlük, kare sayısı ve süre raporlanacak.
-5. SHA-256 checksum üretilecek.
-6. JSON manifest yazılacak.
-
-Henüz model inference yapılmayacak.
-
-Beklenen çıktı:
-
-    outputs/ingest/video_manifest.json
-    outputs/ingest/ffprobe.json
+Bu aşamada kısa videoda insan/oyuncu tespiti yapılacak.
+Henüz takip, takım sınıflandırması veya SoccerNet kurulumu yok.
+Ayrı onay olmadan Aşama 2 kodu yazılmayacaktır.
 
 ## 9. Cursor için zorunlu kurallar
 

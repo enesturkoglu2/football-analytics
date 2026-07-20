@@ -36,7 +36,7 @@ Terminalde aşağıdaki komutlar çalıştırılır:
 - [x] PyTorch CPU doğrulaması
 - [x] OpenCV ve veri paketleri
 - [x] Ultralytics doğrulaması
-- [ ] Video ingest ve metadata
+- [x] Video ingest ve metadata
 - [ ] Oyuncu detection
 - [ ] Oyuncu tracking
 - [ ] Takım sınıflandırması
