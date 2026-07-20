@@ -1,0 +1,44 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environments
+.venv/
+venv/
+
+# IDE
+.vscode/
+.cursor/
+
+# Models and datasets
+*.pt
+*.pth
+*.onnx
+data/*
+!data/test_clips/
+!data/test_clips/.gitkeep
+
+# Generated outputs
+outputs/*
+!outputs/.gitkeep
+logs/*
+!logs/.gitkeep
+
+# Video files
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.webm
+
+# Temporary files
+*.tmp
+*.log
+
+# System
+.DS_Store
+Thumbs.db
