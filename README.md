@@ -37,7 +37,7 @@ Terminalde aşağıdaki komutlar çalıştırılır:
 - [x] OpenCV ve veri paketleri
 - [x] Ultralytics doğrulaması
 - [x] Video ingest ve metadata
-- [ ] Oyuncu detection
+- [x] Oyuncu detection
 - [ ] Oyuncu tracking
 - [ ] Takım sınıflandırması
 - [ ] Re-identification

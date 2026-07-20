@@ -153,13 +153,36 @@ Aşama 1 tamamlandı:
 - `unittest` ile ingest testleri
 - Gerçek klip kabul testi: `data/test_clips/sample.mp4`
 
+Aşama 2 tamamlandı:
+
+- Temel insan/oyuncu adayı tespiti (COCO person, class 0)
+- Model: `models/yolo11n.pt`
+- Parametreler: `device=cpu`, `classes=[0]`, `conf=0.25`, `iou=0.70`, `imgsz=640`
+- Tracking yok; `predict(..., save=False, verbose=False)`
+- Benchmark: `outputs/detection/benchmark_100/` (100 kare)
+- Tam video çıktıları: `outputs/detection/full/`
+  - `annotated.mp4`
+  - `detections.jsonl`
+  - `detection_summary.json`
+- Tam video metrikleri (`data/test_clips/sample.mp4`, 1023 kare):
+  - frames_processed: 1023
+  - total_detections: 14224
+  - frames_with_detections: 1023
+  - avg_detections_per_frame: yaklaşık 13.90
+  - elapsed_sec: yaklaşık 66.31
+  - avg_fps: yaklaşık 15.43
+  - skipped_invalid: 0
+- Annotated video: 1336x744, 30 FPS, 1023 kare
+- `unittest` detection testleri dahil 36 test OK
+
 ## 8. Sıradaki aşama
 
-Aşama 2: Temel oyuncu/insan tespiti.
+Aşama 3: Oyuncu tracking ve geçici ID.
 
-Bu aşamada kısa videoda insan/oyuncu tespiti yapılacak.
-Henüz takip, takım sınıflandırması veya SoccerNet kurulumu yok.
-Ayrı onay olmadan Aşama 2 kodu yazılmayacaktır.
+Bu aşamada tespit edilen insan/oyuncu adaylarına geçici takip kimlikleri
+verilecek. Henüz takım sınıflandırması, re-identification veya SoccerNet
+kurulumu yok. Ayrı onay olmadan Aşama 3 kodu yazılmayacaktır.
+SoccerNet'e henüz geçilmedi.
 
 ## 9. Cursor için zorunlu kurallar
 
@@ -200,11 +223,11 @@ Bu sıra proje ihtiyaçlarına göre değişebilir. Hepsi aynı anda kurulmayaca
 
 ## 11. Mevcut öncelik
 
-Öncelik SoccerNet kurulumu değil, kendi kısa videomuz üzerinde şu hattın
-çalıştığını doğrulamaktır:
+Öncelik SoccerNet kurulumu değil. SoccerNet henüz kurulmadı veya
+klonlanmadı. Sıradaki iş Aşama 3 (oyuncu tracking ve geçici ID):
 
     Video okuma
-    → İnsan/oyuncu tespiti
+    → İnsan/oyuncu tespiti (tamamlandı)
     → Oyuncu takibi
     → Geçici oyuncu ID'leri
     → İşaretlenmiş video
