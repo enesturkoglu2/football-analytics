@@ -69,6 +69,7 @@ Aktivasyon:
 - ultralytics 8.4.102
 - opencv-python 5.0.0.93
 - numpy 2.2.6
+- lap 0.5.13
 - pandas 2.3.3
 - pyarrow 25.0.0
 - matplotlib 3.10.9
@@ -175,13 +176,51 @@ Aşama 2 tamamlandı:
 - Annotated video: 1336x744, 30 FPS, 1023 kare
 - `unittest` detection testleri dahil 36 test OK
 
+Aşama 3 tamamlandı (temel ByteTrack tracking hattı):
+
+- Person tracking + geçici `track_id` (kalıcı oyuncu kimliği değil)
+- Tracker config: `configs/tracking/bytetrack_stage3.yaml`
+- ByteTrack bağımlılığı: `lap==0.5.13`
+- Detection parametreleri: `device=cpu`, `classes=[0]`, `conf=0.25`,
+  `iou` / `detection_iou=0.70`, `imgsz=640`
+- Tracker parametreleri (yaml varsayılanları): `tracker_type=bytetrack`,
+  `track_high_thresh=0.25`, `track_low_thresh=0.1`, `new_track_thresh=0.25`,
+  `track_buffer=30`, `match_thresh=0.8`, `fuse_score=True`
+- `model.track(..., persist=True, save=False, verbose=False)`
+- Benchmark: `outputs/tracking/benchmark_100/` (100 kare)
+- Tam video çıktıları: `outputs/tracking/full/`
+  - `tracked.mp4`
+  - `tracks.jsonl`
+  - `tracking_summary.json`
+- Tam video metrikleri (`data/test_clips/sample.mp4`, 1023 kare):
+  - frames_processed: 1023
+  - total_box_observations: 13309
+  - box_observations_with_track_id: 13309
+  - box_observations_without_track_id: 0
+  - unique_track_ids: 276
+  - track_observation_count: min=1, max=371, mean≈48.22, median=9
+  - track_span_frames: min=1, max=382, mean≈53.63, median=14
+  - yalnızca 1 kare görülen ID: 72
+  - ≤5 kare: 124; ≤10 kare: 148
+  - skipped_invalid: 0
+  - elapsed_sec: ≈61.82; avg_fps: ≈16.55
+- Ground-truth yok: ID-switch / MOTA / HOTA ölçülmedi ve uydurulmadı
+- 276 unique ID ve yüksek kısa ömürlü ID oranı tracking fragmentation
+  işaretidir; bu ID'ler henüz güvenilir kalıcı oyuncu kimlikleri değildir
+- Koşu sırasında bir kez `NMS time limit exceeded` uyarısı görüldü;
+  işlem yine exit 0 / status=ok ile tamamlandı
+- Ortam kaydı: `docs/setup/football-cv-after-tracking.txt` /
+  `football-cv-after-tracking.yml`
+- `unittest` 50 test OK (ingest + detection + tracking)
+
 ## 8. Sıradaki aşama
 
-Aşama 3: Oyuncu tracking ve geçici ID.
+Aşama 4 yönü: kimlik sürekliliği ve re-identification hazırlığı.
 
-Bu aşamada tespit edilen insan/oyuncu adaylarına geçici takip kimlikleri
-verilecek. Henüz takım sınıflandırması, re-identification veya SoccerNet
-kurulumu yok. Ayrı onay olmadan Aşama 3 kodu yazılmayacaktır.
+Temel ByteTrack geçici ID'leri fragmentedir. Sonraki mantıklı adım
+kimlik sürekliliğini iyileştirmek ve ReID hazırlığıdır.
+Henüz takım sınıflandırması veya SoccerNet kurulumu yok.
+Ayrı onay olmadan Aşama 4 kodu yazılmayacaktır.
 SoccerNet'e henüz geçilmedi.
 
 ## 9. Cursor için zorunlu kurallar
@@ -224,10 +263,11 @@ Bu sıra proje ihtiyaçlarına göre değişebilir. Hepsi aynı anda kurulmayaca
 ## 11. Mevcut öncelik
 
 Öncelik SoccerNet kurulumu değil. SoccerNet henüz kurulmadı veya
-klonlanmadı. Sıradaki iş Aşama 3 (oyuncu tracking ve geçici ID):
+klonlanmadı. Sıradaki mantıklı iş kimlik sürekliliği ve
+re-identification hazırlığıdır (Aşama 4 yönü):
 
     Video okuma
     → İnsan/oyuncu tespiti (tamamlandı)
-    → Oyuncu takibi
-    → Geçici oyuncu ID'leri
+    → ByteTrack geçici takip (tamamlandı; fragmented)
+    → Kimlik sürekliliği / ReID hazırlığı
     → İşaretlenmiş video

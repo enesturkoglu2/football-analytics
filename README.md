@@ -38,7 +38,7 @@ Terminalde aşağıdaki komutlar çalıştırılır:
 - [x] Ultralytics doğrulaması
 - [x] Video ingest ve metadata
 - [x] Oyuncu detection
-- [ ] Oyuncu tracking
+- [x] Oyuncu tracking
 - [ ] Takım sınıflandırması
 - [ ] Re-identification
 - [ ] Kamera kalibrasyonu
