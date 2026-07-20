@@ -1,0 +1,31 @@
+# Stage 4B crop selection — frozen settings (4B-1B)
+# Thresholds taken from docs/setup/reid-crop-selection-analysis.md
+# balanced profile row (observation P25). Do not invent alternate values.
+
+schema_version: reid_crop_selection_v1
+profile_name: balanced
+source_analysis: docs/setup/reid-crop-selection-analysis.md
+
+filters:
+  # Exact values as published in the analysis report balanced profile table
+  min_bbox_area: 2211.6
+  min_short_side: 29.77
+  min_confidence: 0.567
+  require_positive_bbox: true
+  clamp_bbox_to_video: true
+
+selection:
+  quality_score: area_times_confidence
+  max_crops_per_track: 5
+  min_frame_gap_within_track: 7
+  ordering:
+    - quality_score_desc
+    - confidence_desc
+    - frame_index_asc
+  greedy_frame_gap: true
+
+# Embedding eligibility only — not an automatic linking permit.
+# Linking suitability and cosine thresholds are deferred to 4B-4 / 4B-5.
+embedding_eligibility:
+  allow_single_crop_embedding: true
+  minimum_crop_count_for_embedding: 1

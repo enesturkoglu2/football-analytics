@@ -1,0 +1,43 @@
+# Stage 4B benchmark track pools — frozen selection (4B-1B)
+# Tracks chosen by data quality / length heuristics only.
+# They are NOT claimed to be the same person.
+# Linking benchmark subset selection happens in Stage 4B-5.
+
+schema_version: reid_benchmark_selection_v1
+source_analysis: docs/setup/reid-crop-selection-analysis.md
+
+notes:
+  - Quality/length based pools from Stage 4B-1A analysis.
+  - Not identity labels; same-person membership is not asserted.
+  - Linking benchmark selection is deferred to Stage 4B-5.
+
+smoke_tracks:
+  - 463
+  - 682
+  - 464
+
+long_quality_pool:
+  - 463
+  - 682
+  - 459
+  - 445
+  - 4
+  - 13
+  - 2
+  - 16
+  - 703
+  - 568
+  - 7
+  - 31
+
+short_quality_pool:
+  - 464
+  - 575
+  - 177
+  - 603
+  - 186
+  - 524
+  - 248
+  - 481
+  - 252
+  - 479
