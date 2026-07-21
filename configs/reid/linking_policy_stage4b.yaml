@@ -1,0 +1,84 @@
+# Stage 4B linking policy — frozen (4B-5C1)
+# Source review: docs/setup/reid-stage4b-linking-policy.md
+# Benchmark context: outputs/reid/limited_benchmark_stage4b_12/
+#
+# This file freezes conservative linking rules only.
+# It does not enable automatic linking and does not set a cosine threshold.
+
+schema_version: reid_linking_policy_v1
+source_review: docs/setup/reid-stage4b-linking-policy.md
+benchmark_source: outputs/reid/limited_benchmark_stage4b_12/
+
+automatic_linking_enabled: false
+similarity_threshold: null
+cosine_usage: ranking_only
+
+temporal:
+  exact_frame_conflict_hard_reject: true
+  span_overlap_hard_reject: false
+  require_component_cross_member_exact_frame_check: true
+
+evidence:
+  minimum_crop_count_per_track_for_strong_review: 3
+  minimum_observation_count_per_track_for_strong_review: 30
+  single_crop_auto_link_allowed: false
+  low_crop_evidence_auto_link_allowed: false
+
+decisions:
+  allowed_labels:
+    - likely_same
+    - likely_different
+    - uncertain
+    - rejected_exact_frame_conflict
+  manual_acceptance_required_for_linking: true
+  uncertain_pair_linking_allowed: false
+  likely_different_pair_linking_allowed: false
+  exact_conflict_pair_linking_allowed: false
+
+component_rules:
+  accepted_edge_does_not_bypass_component_conflict_check: true
+  all_cross_member_pairs_must_be_exact_frame_conflict_free: true
+  uncontrolled_transitive_chaining_allowed: false
+
+global_id:
+  deterministic_policy: minimum_raw_track_id
+  preserve_raw_track_id_mapping: true
+  include_all_raw_tracks: true
+  no_embedding_tracks_remain_singleton: true
+
+audit:
+  preserve_similarity: true
+  preserve_decision_reason: true
+  preserve_component_similarity_min: true
+  preserve_component_similarity_mean: true
+  preserve_accepted_edge_count: true
+
+# Manual visual hypotheses from Stage 4B-5B/5C1 review.
+# These are NOT ground truth and NOT automatic accepted_link edges.
+manual_visual_hypotheses:
+  likely_same:
+    - track_id_a: 4
+      track_id_b: 682
+      cosine_approx: 0.870
+      crop_counts: [5, 5]
+      observation_counts: [252, 327]
+      note: manual_visual_hypothesis_only_not_auto_accepted
+  likely_different:
+    - track_id_a: 4
+      track_id_b: 459
+      cosine_approx: 0.868
+      crop_counts: [5, 5]
+      observation_counts: [252, 325]
+      note: demonstrates_cosine_alone_is_insufficient
+  uncertain:
+    - [2, 463]
+    - [2, 445]
+    - [575, 603]
+    - [464, 575]
+    - [464, 603]
+    - [177, 463]
+  exact_frame_hard_ban_controls:
+    - [445, 464]
+    - [445, 463]
+    - [459, 463]
+    - [463, 575]
