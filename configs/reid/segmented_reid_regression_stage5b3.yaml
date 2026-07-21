@@ -1,0 +1,72 @@
+# Stage 5B3G — segmented ReID regression (implementation baseline).
+# Compares segmented track representation against the Stage 4B raw-track
+# baseline without rewriting global IDs or claiming identity accuracy.
+
+schema_version: reid_segmented_regression_config_v1
+stage_status: implementation_baseline
+
+representation:
+  entity_id: segment_id
+  raw_track_id_preserved: true
+  recompute_scope: manual_split_segments_only
+  reuse_unaffected_baseline_embeddings: true
+  reuse_no_split_control_baseline_embeddings: true
+  reuse_pass_through_baseline_embeddings: true
+  reuse_manual_split_raw_track_embedding: false
+  expand_baseline_embedding_coverage_for_unaffected_tracks: false
+  mixed_raw_track_embedding_allowed_for_manual_split_tracks: false
+
+crop_selection:
+  reuse_existing_stage4b_algorithm: true
+  selected_from_assigned_segment_observations_only: true
+  ambiguous_observations_allowed: false
+  unassigned_observations_allowed: false
+  fallback_to_parent_raw_track_crops: false
+  missing_frames_interpolated: false
+  empty_segment_allowed: true
+  empty_segment_requires_reason: true
+
+embedding:
+  backend: existing_stage4b_osnet
+  preprocessing_must_match_stage4b: true
+  checkpoint_provenance_required: true
+  checkpoint_sha256_required: true
+  normalized_embedding_required: true
+  recomputed_manual_segment_embedding_required_when_crop_available: true
+  quality_weighting_enabled: false
+  kit_weighting_enabled: false
+
+candidate_generation:
+  cosine_similarity_only: true
+  similarity_threshold: null
+  exact_same_frame_overlap_hard_reject: true
+  span_overlap_alone_hard_reject: false
+  same_raw_track_segment_pair_allowed_for_ranking: true
+  same_raw_track_segment_pair_is_auto_merge: false
+  automatic_link_enabled: false
+  automatic_reject_enabled: false
+  component_building_enabled: false
+  manual_review_required: true
+
+regression:
+  compare_to_raw_track_baseline: true
+  affected_raw_track_embedding_retired_from_segmented_view: true
+  unaffected_pair_similarity_must_match_when_both_embeddings_reused: true
+  candidate_rank_delta_is_accuracy: false
+  identity_ground_truth_available: false
+  accuracy_claim_allowed: false
+
+global_identity:
+  global_id_rewrite_enabled: false
+  existing_stage4b_output_preserved: true
+  component_assignment_enabled: false
+  accepted_components_automatically_modified: false
+
+existing_component_audit:
+  raw_component:
+    - 231
+    - 635
+  unchanged: true
+  raw_231_s01_inherits_component: false
+  raw_231_s02_automatically_links_to_635: false
+  future_manual_review_required: true
