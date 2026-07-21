@@ -2,10 +2,14 @@
 
 - **Date:** 2026-07-21
 - **Original gate:** Stage 5A1 — policy and schema planning
-- **Stage 5A status:** `visually_validated_measurement_baseline`
+- **Stage 5A status:** `visually_validated_measurement_baseline` (completed)
+- **Next technical gate:** Stage 5B — coarse team/kit descriptor
+- **Focused target-player gate:** Stage 5D
+- **Pitch-position / GameState:** Stage 6 (separate from Stage 5)
 - **Identity-signals policy:** `configs/reid/identity_signals_stage5.yaml`
 - **Crop-quality policy:** `configs/reid/crop_quality_policy_stage5a.yaml`
 - **Quality visual validation:** `docs/setup/stage5a-quality-visual-validation.md`
+- **Focused-player / pitch roadmap:** [focused-player-and-pitch-position-roadmap.md](focused-player-and-pitch-position-roadmap.md)
 - **Stage 4B baseline:** `completed_baseline` (commit `76ede91`)
 - **Quality measurement commit:** `d6122d0`
 
@@ -13,13 +17,27 @@ Stage 5A1 originally froze design/policy only. Stage 5A2/5A3 later
 implemented measurement and visual validation without selecting a
 threshold or enabling exclusion.
 
+Stage 5B0 later documented the multi-match **focused target-player**
+product direction and Stage 6 pitch-position / GameState adapter path.
+Product rules are **not** hard-coded to `sample.mp4`; that clip remains
+development / reference only. Multi-match generalization is not yet
+validated.
+
 ## 1. Goal
 
 Stage 5 does **not** train a new ReID model. It adds football-context
 auxiliary identity evidence on top of the existing OSNet Market1501
 embedding baseline from Stage 4B.
 
-Stage 4B context (facts):
+The system is intended for **many matches**. Primary product priority is
+reliable follow-up of usually **1–2 pre-selected target players**, while
+all other players remain available as anonymous context (team/role /
+global candidate) for proximity, pressure, space, and team-shape
+analysis. There is **no** forced two-team assignment and **no** forced
+target-player assignment.
+
+Stage 4B context (`sample.mp4` development/reference facts — **not**
+cross-match constants):
 
 | Item | Value |
 |---|---|
@@ -41,8 +59,9 @@ track crops
 → crop quality and contamination signals
 → team/kit appearance signals
 → jersey-number evidence
+→ focused target enrollment / gallery design (Stage 5D)
 → optional weak appearance signals
-→ pair-level evidence fusion
+→ pair-level evidence fusion (Stage 5E)
 → manual-review ranking
 → conservative linking input
 ```
@@ -157,17 +176,33 @@ Rules:
 | **5A1** | identity-signal policy and schema planning | completed |
 | **5A2** | crop-quality and contamination baseline — code + mock tests | completed |
 | **5A3** | real full run + visual validation on existing `sample.mp4` crops | completed |
-| **5B1** | coarse team/kit descriptor — code + mock tests | next |
-| **5B2** | `sample.mp4` kit descriptor run and visual validation | pending |
+| **5B0** | focused-player + pitch-position roadmap (docs only) | this gate |
+| **5B1** | coarse team/kit descriptor — code + mock tests | next technical |
+| **5B2** | `sample.mp4` kit descriptor run and visual validation (dev/reference only) | pending |
 | **5C1** | jersey-number visibility audit — **no OCR model yet** | pending |
 | **5C2** | jersey-number extraction baseline selection — OCR/model decision needs separate approval | pending |
-| **5D** | pair-level evidence fusion and review ranking | pending |
-| **5E** | golden clips / ground-truth evaluation preparation | pending |
+| **5D** | focused target-player enrollment and gallery design (`target_A` / `target_B` / `non_target` / `unknown`) | pending |
+| **5E** | pair-level auxiliary evidence fusion and manual-review ranking | pending |
+| **6A** | camera calibration / pitch projection adapter investigation | pending (Stage 6) |
+| **6B** | isolated GameState or equivalent 2D pitch-position integration | pending (Stage 6) |
+| **6C** | appearance + kit + number + pitch-position continuity fusion | pending (Stage 6) |
+| **6D** | multi-match golden clips and official evaluation | pending (Stage 6) |
 
-Hair and shoe features:
+Hair, shoe, and controlled-marker features:
 
-- Optional enhancement **after** Stage 5D
-- **Not required** for core Stage 5 success
+- Optional weak / supporting evidence
+- **Not** core identity proof
+- **Not required** for core Stage 5 / Stage 6 success
+
+Frozen product-stage summary (see also
+[focused-player-and-pitch-position-roadmap.md](focused-player-and-pitch-position-roadmap.md)):
+
+- **5A** crop quality — completed
+- **5B** coarse team/kit — next technical gate
+- **5C** jersey-number visibility audit
+- **5D** focused target-player enrollment / gallery
+- **5E** pair-level fusion + manual-review ranking
+- **6A–6D** pitch-position / GameState adapter path and multi-match eval
 
 ### Stage 5A completion notes
 
@@ -182,7 +217,8 @@ Hair and shoe features:
 - Global Laplacian threshold is **prohibited**; size-stratified
   audit/ranking is allowed
 - Frame-edge contact is **audit only** (not body-completeness proof)
-- Next implementation gate: **Stage 5B1 coarse team/kit descriptor**
+- Next technical implementation gate: **Stage 5B1 coarse team/kit
+  descriptor**
 
 ### Stage 5B1 guardrails (preview)
 
@@ -190,8 +226,23 @@ When Stage 5B1 is approved separately:
 
 - Use a torso-oriented descriptor
 - Preserve off-pitch / outlier / unknown handling
+- No forced two-team assignment
 - Kit similarity is **not** identity proof
 - Must not produce any automatic link or hard reject
+
+### Stage 5D / Stage 6 roadmap notes (preview)
+
+- Stage **5D** is the focused target-player enrollment and gallery design
+  gate (`target_A` / `target_B` / `non_target` / `unknown`)
+- Automatic target assignment starts **off**
+- No automatic gallery expansion from high cosine alone
+- Remaining `unknown` is required when evidence is insufficient
+- Other players stay available as anonymous context for analysis
+- GameState / 2D pitch position is **Stage 6**, as a separate adapter;
+  it does **not** replace ReID
+- Initial spatial usage is audit/ranking only; spatial hard reject starts
+  **false**
+- `sample.mp4` remains development / reference only
 
 Note: implementation starts with crop quality (5A2) as a foundation for
 downstream kit/number reliability. Identity-evidence priority ranking
@@ -269,21 +320,31 @@ Stage 5 is successful when:
 - Auxiliary signals are explainable in audit files
 - Exact-frame safety is preserved
 - No accuracy claim is made without ground truth
+- Anonymous full-scene context tracks remain available for analysis
+- Focused target-player design (Stage 5D) can keep `unknown` and avoid
+  forced assignment
 
 Stage 5 completion does **not** require:
 
-- Implementing every hair/shoe feature
+- Continuously naming all 22 players
+- Implementing every hair/shoe/marker feature
 - Training a new ReID model
 - Enabling automatic linking
+- Installing or running GameState inside `football-cv`
 
 ## 6. Hard non-goals for early Stage 5 gates
 
 - Selecting a cosine / identity-score threshold
 - Enabling automatic linking or automatic identity fusion
+- Enabling automatic target assignment or automatic gallery expansion
+- Forced two-team or forced target-player assignment
 - Claiming MOTA / HOTA / IDF1 / ReID mAP / accuracy %
 - Deleting or rewriting raw crops / raw track IDs
+- Hard-coding product rules to `sample.mp4` IDs / counts / kit colors
+- Treating GameState as a ReID replacement
 - Downloading OCR or team-classification models without a later approval
   gate (especially before/without 5C1 visibility audit)
+- Bulk-installing sn-gamestate into `football-cv`
 
 ## 7. Relationship to Stage 4B linking policy
 
@@ -302,6 +363,7 @@ audited linking inputs. Until fusion is explicitly enabled and approved:
 - `docs/setup/reid-stage4b-linking-policy.md`
 - `docs/setup/reid-stage4b-schema-decisions.md`
 - `docs/setup/stage5a-quality-visual-validation.md`
+- [focused-player-and-pitch-position-roadmap.md](focused-player-and-pitch-position-roadmap.md)
 - `configs/reid/linking_policy_stage4b.yaml`
 - `configs/reid/crop_selection_stage4b.yaml`
 - `configs/reid/identity_signals_stage5.yaml`
