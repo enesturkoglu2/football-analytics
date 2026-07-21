@@ -7,9 +7,9 @@
   `visually_validated_measurement_baseline_with_track_impurity_findings`
   (completed measurement + visual validation)
 - **Stage 5B3 status:**
-  `visually_validated_manual_segment_plan_not_applied`
-- **Next technical gate:** Stage 5B3F — non-destructive manual segment-view
-  implementation
+  `completed_segmented_reid_regression_baseline`
+- **Next technical gate:** Stage 5C-A — jersey-number
+  visibility/readability measurement baseline (no OCR)
 - **Focused target-player gate:** Stage 5D
 - **Pitch-position / GameState:** Stage 6 (separate from Stage 5)
 - **Identity-signals policy:** `configs/reid/identity_signals_stage5.yaml`
@@ -21,8 +21,10 @@
   `configs/reid/track_purity_audit_stage5b3.yaml`
 - **Manual segmentation policy:**
   `configs/reid/manual_track_segmentation_policy_stage5b3.yaml`
-- **Manual segment decisions (plan only):**
+- **Frozen manual segment decisions (source for derived view):**
   `configs/reid/manual_track_segment_decisions_stage5b3.yaml`
+- **Segmented ReID regression result:**
+  [stage5b3g-segmented-reid-regression.md](stage5b3g-segmented-reid-regression.md)
 - **Quality visual validation:** `docs/setup/stage5a-quality-visual-validation.md`
 - **Kit visual validation:** [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)
 - **Full-observation purity visual validation:**
@@ -49,10 +51,12 @@ change is impurity-risk evidence; raw tracks are **not** atomic identity
 guarantees. No team assignment, clustering, auto-split, or global-ID
 rewrite was enabled.
 
-Stage 5B3A–5B3D later implemented measurement-only purity audit, real
-run, selected-crop transition review, and full-observation localization
-review. Stage 5B3E freezes a **manual non-destructive segment plan**
-that is **not applied** yet. Raw tracks remain immutable.
+Stage 5B3A–5B3D implemented measurement-only purity audit, a real run,
+selected-crop transition review, and full-observation localization
+review. At the Stage 5B3E gate, the **manual non-destructive segment
+plan** was frozen but not yet applied. Stage 5B3F later materialized the
+derived segment view without mutating raw tracks, and Stage 5B3G
+completed the real segmented OSNet regression baseline.
 
 ## 1. Goal
 
@@ -215,10 +219,15 @@ Rules:
 | **5B3C** | selected-crop transition visual review panels | completed |
 | **5B3D** | full-observation visual validation / switch localization review | completed |
 | **5B3E** | manual segment plan and policy freeze (docs/config only) | completed |
-| **5B3F** | non-destructive manual segment-view implementation | next technical |
-| **5B3G** | segmented crop/embedding/ReID regression run | pending |
-| **5C1** | jersey-number visibility audit — **no OCR model yet** | pending |
-| **5C2** | jersey-number extraction baseline selection — OCR/model decision needs separate approval | pending |
+| **5B3F-A** | non-destructive manual segment-view implementation | completed |
+| **5B3F-B** | real 13,309-observation segment-view run | completed |
+| **5B3G-A** | segmented regression implementation | completed |
+| **5B3G-A1** | exact-conflict regression compatibility patch | completed |
+| **5B3G-B** | real segmented OSNet regression | completed |
+| **5C-A** | jersey-number visibility/readability measurement baseline — **no OCR** | next |
+| **5C-B** | SoccerNet sn-jersey / sn-gamestate jersey capability audit | pending |
+| **5C-C** | isolated jersey recognizer smoke test | pending |
+| **5C-D** | tracklet-level multi-frame jersey aggregation | pending |
 | **5D** | focused target-player enrollment and gallery design (`target_A` / `target_B` / `non_target` / `unknown`) | pending |
 | **5E** | pair-level auxiliary evidence fusion and manual-review ranking | pending |
 | **6A** | camera calibration / pitch projection adapter investigation | pending (Stage 6) |
@@ -243,13 +252,22 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
 - **5B3C** selected-crop transition visual review — completed
 - **5B3D** full-observation visual validation — completed
 - **5B3E** manual segment plan and policy freeze — completed
-  (status: `visually_validated_manual_segment_plan_not_applied`)
-- **5B3F** non-destructive manual segment-view implementation — next
-- **5B3G** segmented crop/embedding/ReID regression run — pending
-  (old raw-track baseline vs segmented-track result on `sample.mp4`
-  development/reference; no raw-track in-place mutation; no automatic
-  segment merging)
-- **5C** jersey-number visibility audit
+  (historical status at that gate:
+  `visually_validated_manual_segment_plan_not_applied`)
+- **5B3F-A** non-destructive manual segment-view implementation —
+  completed
+- **5B3F-B** real 13,309-observation segment-view run — completed
+- **5B3G-A** segmented regression implementation — completed
+- **5B3G-A1** exact-conflict regression compatibility patch — completed
+- **5B3G-B** real segmented OSNet regression — completed
+  (status: `completed_segmented_reid_regression_baseline`; 13 retired
+  mixed parents, 28 recomputed manual segments, 122 reused embeddings,
+  150 embedded segment entities, and 141 deliberate no-baseline
+  entities; no automatic identity action)
+- **5C-A** jersey-number visibility/readability measurement baseline —
+  next (no OCR, recognizer, or jersey assignment)
+- **5C-B–5C-D** capability audit, isolated recognizer smoke, and
+  tracklet-level multi-frame aggregation
 - **5D** focused target-player enrollment / gallery
 - **5E** pair-level fusion + manual-review ranking
 - **6A–6D** pitch-position / GameState adapter path and multi-match eval
@@ -300,22 +318,62 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
 - Stage 5B3D full-observation visual validation: **completed**
   (15 focus tracks, 1329 raw observations, 22 windows; no interpolation)
 - Stage 5B3E manual segment plan + policy freeze: **completed**
+- Stage 5B3F-A non-destructive segment-view implementation:
+  **completed**
+- Stage 5B3F-B real 13,309-observation segment-view run: **completed**
+- Stage 5B3G-A segmented regression implementation: **completed**
+- Stage 5B3G-A1 exact-conflict compatibility patch: **completed**
+- Stage 5B3G-B real segmented OSNet regression: **completed**
 - Stage 5B3 status:
-  **`visually_validated_manual_segment_plan_not_applied`**
+  **`completed_segmented_reid_regression_baseline`**
 - Manual plan: 13 split candidates, 2 no-split contamination controls,
   15 probable switch events (11 gap-bounded, 2 overlap-ambiguous,
   2 adjacent-observation) — **not** ground truth
-- Raw tracks immutable; plan **not applied**; no exact split decision
-  written into tracking outputs
+- Raw tracks remain immutable. The plan is materialized only as a
+  derived non-destructive segment view; no exact split decision is
+  written into raw tracking outputs.
 - `[231, 635]` unchanged; only future `raw_231_s02` may be re-reviewed
   against `635`; `raw_231_s01` must not inherit the component
-- Next technical gate: **Stage 5B3F non-destructive manual segment-view**
-- Later: **Stage 5B3G** segmented crop/embedding/ReID regression test
-  on real video (`sample.mp4` development/reference), comparing old
-  raw-track baseline vs segmented-track result without mutating raw
-  tracks or auto-merging segments
-- Stage 5B3 remains a **safety gate before Stage 5C** jersey-number
-  visibility
+- Existing [231, 635] unchanged: true; component inheritance and
+  automatic segment linking remain false.
+- Real segmented regression facts: 13 retired mixed parent embeddings,
+  28/28 recomputed manual-segment embeddings, 122 reused baseline
+  embeddings, 150 embedded segment entities, 75 new crops, 11,175
+  possible pairs, 1,668 exact-overlap hard rejects, and 9,507 ranked
+  candidates
+- Regression safety: 7,381 unaffected pairs =
+  6,177 rank-eligible + 1,204 exact-conflict audits; similarity
+  mismatch 0 and missing non-conflict candidate 0
+- No threshold, accuracy claim, automatic merge/link/reject/component,
+  global-ID rewrite, or team assignment
+- Next technical gate: **Stage 5C-A jersey-number
+  visibility/readability measurement baseline**
+
+### Stage 5C-A handoff (next)
+
+Stage 5C-A is a measurement-only visibility/readability audit:
+
+- no OCR;
+- no recognizer or checkpoint;
+- no automatic jersey-number assignment;
+- input entity key is `segment_id`;
+- manual segments use segmented crop and assigned-observation
+  provenance;
+- ambiguous/unassigned observations remain excluded;
+- full/control segments may be sampled, but pass-through reuse is not
+  track-purity proof; and
+- output is visibility/audit evidence only.
+
+The retained downstream order is:
+
+- **Stage 5C-B:** SoccerNet sn-jersey / sn-gamestate jersey capability
+  audit;
+- **Stage 5C-C:** isolated recognizer smoke test;
+- **Stage 5C-D:** tracklet-level multi-frame aggregation;
+- **Stage 5D:** target-player enrollment/gallery memory;
+- **Stage 5E:** evidence fusion and golden evaluation; and
+- **Stage 6:** GameState/calibration/pitch coordinates and spatial
+  continuity.
 
 ### Stage 5B3 guardrails (retained)
 
@@ -446,7 +504,7 @@ Stage 5 completion does **not** require:
 - Hard-coding product rules to `sample.mp4` IDs / counts / kit colors
 - Treating GameState as a ReID replacement
 - Downloading OCR or team-classification models without a later approval
-  gate (especially before/without 5C1 visibility audit)
+  gate (especially before/without the Stage 5C-A visibility audit)
 - Bulk-installing sn-gamestate into `football-cv`
 
 ## 7. Relationship to Stage 4B linking policy
@@ -468,6 +526,7 @@ audited linking inputs. Until fusion is explicitly enabled and approved:
 - `docs/setup/stage5a-quality-visual-validation.md`
 - [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)
 - [stage5b3d-full-observation-visual-validation.md](stage5b3d-full-observation-visual-validation.md)
+- [stage5b3g-segmented-reid-regression.md](stage5b3g-segmented-reid-regression.md)
 - [focused-player-and-pitch-position-roadmap.md](focused-player-and-pitch-position-roadmap.md)
 - `configs/reid/linking_policy_stage4b.yaml`
 - `configs/reid/crop_selection_stage4b.yaml`
