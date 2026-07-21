@@ -1,0 +1,133 @@
+schema_version: reid_jersey_review_panel_config_v1
+stage_status: implementation_manual_review_panel_baseline
+
+input:
+  require_measurement_status_ok: true
+  require_crop_signal_schema: reid_jersey_visibility_crop_signal_v1
+  require_segment_summary_schema: reid_jersey_visibility_segment_summary_v1
+  use_existing_crop_signals_only: true
+  allow_video_input: false
+  allow_new_crop_extraction: false
+  require_source_crop_sha_match: true
+
+review_universe:
+  include_all_selected_crops: true
+  include_no_selected_crop_segments: false
+  deduplicate_review_items: true
+  preserve_all_group_memberships: true
+
+groups:
+  all_selected_crops:
+    enabled: true
+  all_manual_segment_crops:
+    enabled: true
+  roi_height_top:
+    enabled: true
+    count: 20
+  roi_height_bottom:
+    enabled: true
+    count: 20
+  local_contrast_top:
+    enabled: true
+    count: 20
+  local_contrast_bottom:
+    enabled: true
+    count: 20
+  entropy_top:
+    enabled: true
+    count: 20
+  entropy_bottom:
+    enabled: true
+    count: 20
+  roi_contamination_low:
+    enabled: true
+    count: 20
+  roi_contamination_high:
+    enabled: true
+    count: 20
+  sharpness_by_roi_height_stratum:
+    enabled: true
+    laplacian_top_count: 10
+    laplacian_bottom_count: 10
+    tenengrad_top_count: 10
+    tenengrad_bottom_count: 10
+  critical_segments:
+    enabled: true
+    segment_ids:
+      - raw_7_s01
+      - raw_7_s02
+      - raw_7_s03
+      - raw_31_s01
+      - raw_31_s02
+      - raw_177_s01
+      - raw_177_s02
+      - raw_231_s01
+      - raw_231_s02
+      - raw_414_s01
+      - raw_414_s02
+      - raw_514_s01
+      - raw_514_s02
+      - raw_514_s03
+
+panel:
+  columns: 4
+  rows: 3
+  output_format: png
+  original_crop_display: true
+  draw_number_search_roi: true
+  roi_zoom_display: true
+  roi_zoom_interpolation: nearest
+  allow_visual_enhancement: false
+  preserve_aspect_ratio: true
+  annotate_actual_dimensions: true
+  annotate_segment_id: true
+  annotate_crop_id: true
+  annotate_frame_index: true
+  annotate_crop_source_kind: true
+  annotate_roi_height: true
+  annotate_roi_contamination: true
+  annotate_group_metric: true
+  annotate_predicted_number: false
+  annotate_visibility_class: false
+
+manual_review:
+  emit_blank_annotation_template: true
+  allowed_crop_valid_values:
+    - "valid"
+    - "invalid"
+    - "uncertain"
+  allowed_back_facing_values:
+    - "yes"
+    - "no"
+    - "uncertain"
+  allowed_number_visible_values:
+    - "yes"
+    - "no"
+    - "uncertain"
+  allowed_number_readable_values:
+    - "yes"
+    - "no"
+    - "uncertain"
+  allowed_digit_count_values:
+    - "0"
+    - "1"
+    - "2"
+    - "uncertain"
+  initial_values_are_blank: true
+
+recognition:
+  OCR_enabled: false
+  recognizer_enabled: false
+  checkpoint_required: false
+  jersey_number_candidate_enabled: false
+  automatic_jersey_assignment_enabled: false
+
+safety:
+  source_crops_immutable: true
+  measurement_artifacts_immutable: true
+  panels_are_display_only: true
+  panel_images_are_not_recognition_input: true
+  identity_ground_truth_available: false
+  accuracy_claim_allowed: false
+  team_assignment_enabled: false
+  global_id_rewrite_enabled: false
