@@ -38,6 +38,7 @@ from football_analytics.reid.segment_regression import (
     STATUS_REUSE,
     SUMMARY_NAME,
     SegmentRegressionError,
+    build_pair_deltas,
     build_representation_plan,
     build_segment_candidates,
     embedding_vector_sha256,
@@ -190,8 +191,12 @@ def _segment_summary(**overrides) -> dict:
     return base
 
 
-def _build_segment_view(root: Path) -> None:
-    """Build a tiny segment view: split 7, control 268, embedded 10, non-embedded 99."""
+def _build_segment_view(root: Path, *, with_conflict_track: bool = False) -> None:
+    """Build a tiny segment view: split 7, control 268, embedded 10, non-embedded 99.
+
+    With ``with_conflict_track`` an extra preserved track 12 is added whose
+    frames exactly overlap track 10 on frame 24 (segment-level exact conflict).
+    """
     segs = [
         {
             "schema_version": "reid_track_segment_v1",
@@ -314,6 +319,33 @@ def _build_segment_view(root: Path) -> None:
             "global_id_rewrite_applied": False,
         },
     ]
+    if with_conflict_track:
+        segs.append(
+            {
+                "schema_version": "reid_track_segment_v1",
+                "segment_id": "raw_12_full",
+                "raw_track_id": 12,
+                "segment_kind": "preserved_full_track",
+                "segment_index": None,
+                "decision": "preserved_full_track",
+                "source_decision_status": "visually_reviewed_plan_not_applied",
+                "configured_frame_min": 22,
+                "configured_frame_max": 26,
+                "first_observation_frame": 22,
+                "last_observation_frame": 26,
+                "observation_count": 3,
+                "ambiguous_observation_count_excluded": 0,
+                "include_existing_observations_only": True,
+                "source_observations_preserved": True,
+                "proven_physical_identity": False,
+                "team_assignment": None,
+                "global_id": None,
+                "automatic_split_applied": False,
+                "automatic_merge_applied": False,
+                "automatic_link_applied": False,
+                "global_id_rewrite_applied": False,
+            }
+        )
     # sort by raw_track_id then manual first
     segs.sort(key=lambda r: (r["raw_track_id"], 0 if r["segment_kind"] == "manual_split_segment" else 1, r["segment_index"] or 0))
 
@@ -324,6 +356,9 @@ def _build_segment_view(root: Path) -> None:
         ("raw_99_full", 99, [30, 32]),
         ("raw_268_full", 268, [40, 44, 49]),
     ]
+    if with_conflict_track:
+        # frame 24 exactly overlaps raw_10_full
+        assigned_specs.insert(3, ("raw_12_full", 12, [22, 24, 26]))
     assigned = []
     row_idx = 0
     for sid, tid, frames in assigned_specs:
@@ -378,7 +413,13 @@ def _build_segment_view(root: Path) -> None:
     _write_json(root / "segment_view_summary.json", _segment_summary())
 
 
-def _build_baseline(root: Path, *, vectors: dict[int, np.ndarray]) -> None:
+def _build_baseline(
+    root: Path,
+    *,
+    vectors: dict[int, np.ndarray],
+    conflict_pairs: set[tuple[int, int]] | None = None,
+) -> None:
+    conflict_pairs = conflict_pairs or set()
     (root / "crops").mkdir(parents=True)
     (root / "aggregation").mkdir(parents=True)
     (root / "candidates").mkdir(parents=True)
@@ -444,17 +485,22 @@ def _build_baseline(root: Path, *, vectors: dict[int, np.ndarray]) -> None:
         for j in range(i + 1, len(tids)):
             a, b = tids[i], tids[j]
             sim = float(np.dot(vectors[a], vectors[b]))
+            conflict = (a, b) in conflict_pairs
             pairs.append(
                 {
                     "track_id_a": a,
                     "track_id_b": b,
                     "cosine_similarity": sim,
                     "temporal_gap_frames": 0,
-                    "exact_frame_overlap_count": 0,
-                    "exact_frame_conflict": False,
-                    "span_interval_overlap": False,
-                    "decision": "eligible_unthresholded",
-                    "decision_reason": "similarity_threshold_pending",
+                    "exact_frame_overlap_count": 1 if conflict else 0,
+                    "exact_frame_conflict": conflict,
+                    "span_interval_overlap": conflict,
+                    "decision": "rejected" if conflict else "eligible_unthresholded",
+                    "decision_reason": (
+                        "exact_frame_conflict"
+                        if conflict
+                        else "similarity_threshold_pending"
+                    ),
                     "schema_version": "reid_candidate_pair_v1",
                 }
             )
@@ -887,6 +933,330 @@ class CandidateHelperTests(unittest.TestCase):
         self.assertTrue(span_only["span_overlap"])
         self.assertFalse(span_only["exact_same_frame_overlap"])
         self.assertIsNotNone(span_only["cosine_similarity"])
+
+
+class PairDeltaConflictTests(unittest.TestCase):
+    """Unaffected reused pairs: exact-frame-conflict audit semantics."""
+
+    @staticmethod
+    def _entity(sid: str, rid: int) -> dict:
+        return {
+            "segment_id": sid,
+            "raw_track_id": rid,
+            "representation_source": "reused_baseline_raw_track_embedding",
+            "embedding_available": True,
+        }
+
+    @staticmethod
+    def _cand(
+        sid_a: str,
+        sid_b: str,
+        rid_a: int,
+        rid_b: int,
+        *,
+        sim: float | None,
+        overlap: bool,
+        overlap_count: int = 0,
+        rank: int | None = None,
+    ) -> dict:
+        return {
+            "segment_id_a": sid_a,
+            "segment_id_b": sid_b,
+            "raw_track_id_a": rid_a,
+            "raw_track_id_b": rid_b,
+            "same_parent_raw_track": False,
+            "cosine_similarity": sim,
+            "rank": rank,
+            "exact_same_frame_overlap": overlap,
+            "exact_frame_overlap_count": overlap_count,
+            "span_overlap": overlap,
+            "similarity_threshold": None,
+            "automatic_link_decision": None,
+            "automatic_reject_decision": None,
+            "component_assignment": None,
+            "manual_review_required": True,
+        }
+
+    def _fixture(self):
+        v10, v12, v268 = _unit(2), _unit(4), _unit(3)
+        vectors_by_segment = {
+            "raw_10_full": v10,
+            "raw_12_full": v12,
+            "raw_268_full": v268,
+        }
+        baseline_vectors = {10: v10, 12: v12, 268: v268}
+        entity_by_segment = {
+            "raw_10_full": self._entity("raw_10_full", 10),
+            "raw_12_full": self._entity("raw_12_full", 12),
+            "raw_268_full": self._entity("raw_268_full", 268),
+        }
+        sim_10_12 = float(np.dot(v10, v12))
+        sim_10_268 = float(np.dot(v10, v268))
+        sim_12_268 = float(np.dot(v12, v268))
+        baseline_pairs = {
+            (10, 12): {
+                "cosine_similarity": sim_10_12,
+                "exact_frame_conflict": True,
+                "exact_frame_overlap_count": 1,
+                "decision": "rejected",
+            },
+            (10, 268): {
+                "cosine_similarity": sim_10_268,
+                "exact_frame_conflict": False,
+                "exact_frame_overlap_count": 0,
+                "decision": "eligible_unthresholded",
+            },
+            (12, 268): {
+                "cosine_similarity": sim_12_268,
+                "exact_frame_conflict": False,
+                "exact_frame_overlap_count": 0,
+                "decision": "eligible_unthresholded",
+            },
+        }
+        candidates = [
+            self._cand(
+                "raw_10_full", "raw_12_full", 10, 12,
+                sim=None, overlap=True, overlap_count=1,
+            ),
+            self._cand(
+                "raw_10_full", "raw_268_full", 10, 268,
+                sim=sim_10_268, overlap=False, rank=1,
+            ),
+            self._cand(
+                "raw_12_full", "raw_268_full", 12, 268,
+                sim=sim_12_268, overlap=False, rank=2,
+            ),
+        ]
+        return (
+            baseline_pairs,
+            candidates,
+            entity_by_segment,
+            vectors_by_segment,
+            baseline_vectors,
+        )
+
+    def _run(self, baseline_pairs, candidates, entities, seg_vecs, base_vecs):
+        return build_pair_deltas(
+            baseline_pairs=baseline_pairs,
+            segment_candidates=candidates,
+            entity_by_segment=entities,
+            split_parents=set(),
+            vectors_by_segment=seg_vecs,
+            baseline_vectors_by_track=base_vecs,
+        )
+
+    def test_exact_conflict_audit_success(self) -> None:
+        baseline_pairs, candidates, entities, seg_vecs, base_vecs = self._fixture()
+        deltas = self._run(baseline_pairs, candidates, entities, seg_vecs, base_vecs)
+        conflict = [d for d in deltas if d["delta_kind"] == "unaffected_exact_frame_conflict"]
+        normal = [d for d in deltas if d["delta_kind"] == "unaffected_reused_pair"]
+        self.assertEqual(len(conflict), 1)
+        self.assertEqual(len(normal), 2)
+        row = conflict[0]
+        self.assertEqual((row["baseline_track_id_a"], row["baseline_track_id_b"]), (10, 12))
+        self.assertTrue(row["baseline_exact_frame_conflict"])
+        self.assertTrue(row["segmented_exact_same_frame_overlap"])
+        self.assertTrue(row["hard_rejected"])
+        self.assertEqual(row["hard_reject_reason"], "exact_same_frame_overlap")
+        self.assertFalse(row["segmented_ranked_candidate_available"])
+        self.assertIsNone(row["segmented_rank"])
+        self.assertTrue(row["similarity_match"])
+        self.assertAlmostEqual(
+            row["reused_vector_audit_cosine"],
+            row["baseline_cosine_similarity"],
+            places=5,
+        )
+        self.assertIsNone(row["automatic_link_decision"])
+        self.assertIsNone(row["automatic_reject_decision"])
+        self.assertIsNone(row["component_assignment"])
+        self.assertFalse(row["accuracy_claimed"])
+        # hard-rejected candidate itself stays unranked and similarity-null
+        cand = candidates[0]
+        self.assertIsNone(cand["rank"])
+        self.assertIsNone(cand["cosine_similarity"])
+
+    def test_conflict_audit_cosine_mismatch_rejected(self) -> None:
+        baseline_pairs, candidates, entities, seg_vecs, base_vecs = self._fixture()
+        baseline_pairs[(10, 12)]["cosine_similarity"] += 0.01
+        with self.assertRaisesRegex(SegmentRegressionError, "audit cosine mismatch"):
+            self._run(baseline_pairs, candidates, entities, seg_vecs, base_vecs)
+
+    def test_baseline_conflict_segmented_nonconflict_rejected(self) -> None:
+        baseline_pairs, candidates, entities, seg_vecs, base_vecs = self._fixture()
+        candidates[0]["exact_same_frame_overlap"] = False
+        candidates[0]["cosine_similarity"] = float(
+            baseline_pairs[(10, 12)]["cosine_similarity"]
+        )
+        with self.assertRaisesRegex(SegmentRegressionError, "conflict flag mismatch"):
+            self._run(baseline_pairs, candidates, entities, seg_vecs, base_vecs)
+
+    def test_baseline_nonconflict_segmented_conflict_rejected(self) -> None:
+        baseline_pairs, candidates, entities, seg_vecs, base_vecs = self._fixture()
+        candidates[1]["exact_same_frame_overlap"] = True
+        candidates[1]["cosine_similarity"] = None
+        with self.assertRaisesRegex(SegmentRegressionError, "conflict flag mismatch"):
+            self._run(baseline_pairs, candidates, entities, seg_vecs, base_vecs)
+
+    def test_undetermined_hard_reject_provenance_rejected(self) -> None:
+        baseline_pairs, candidates, entities, seg_vecs, base_vecs = self._fixture()
+        candidates[0]["exact_same_frame_overlap"] = None
+        with self.assertRaisesRegex(SegmentRegressionError, "provenance is undetermined"):
+            self._run(baseline_pairs, candidates, entities, seg_vecs, base_vecs)
+
+    def test_conflict_reused_vector_mismatch_rejected(self) -> None:
+        baseline_pairs, candidates, entities, seg_vecs, base_vecs = self._fixture()
+        base_vecs = dict(base_vecs)
+        base_vecs[10] = _unit(77)
+        with self.assertRaisesRegex(SegmentRegressionError, "reused vector differs"):
+            self._run(baseline_pairs, candidates, entities, seg_vecs, base_vecs)
+
+    def test_nonconflict_missing_candidate_still_fatal(self) -> None:
+        baseline_pairs, candidates, entities, seg_vecs, base_vecs = self._fixture()
+        candidates = [
+            c
+            for c in candidates
+            if {c["segment_id_a"], c["segment_id_b"]} != {"raw_10_full", "raw_268_full"}
+        ]
+        with self.assertRaisesRegex(SegmentRegressionError, "missing segmented candidate"):
+            self._run(baseline_pairs, candidates, entities, seg_vecs, base_vecs)
+
+    def test_nonconflict_similarity_mismatch_still_fatal(self) -> None:
+        baseline_pairs, candidates, entities, seg_vecs, base_vecs = self._fixture()
+        candidates[1]["cosine_similarity"] = float(candidates[1]["cosine_similarity"]) + 0.01
+        with self.assertRaisesRegex(SegmentRegressionError, "similarity mismatch"):
+            self._run(baseline_pairs, candidates, entities, seg_vecs, base_vecs)
+
+    def test_missing_mapped_full_segment_rejected(self) -> None:
+        baseline_pairs, candidates, entities, seg_vecs, base_vecs = self._fixture()
+        entities = {k: v for k, v in entities.items() if k != "raw_12_full"}
+        with self.assertRaisesRegex(SegmentRegressionError, "no mapped full segments"):
+            self._run(baseline_pairs, candidates, entities, seg_vecs, base_vecs)
+
+
+class ConflictEndToEndTests(unittest.TestCase):
+    def test_summary_counts_with_conflict_pair(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp:
+            tmp_path = Path(tmp)
+            view_dir = tmp_path / "view"
+            base_dir = tmp_path / "base"
+            out_dir = tmp_path / "out"
+            video = tmp_path / "fake.mp4"
+            video.write_bytes(b"not-a-real-video")
+            ckpt = tmp_path / "ckpt.bin"
+            ckpt.write_bytes(b"fake-checkpoint-bytes")
+            sn_root = tmp_path / "sn-reid"
+            sn_root.mkdir()
+            (sn_root / "torchreid").mkdir()
+            subprocess.run(["git", "init"], cwd=sn_root, check=True, capture_output=True)
+            (sn_root / "torchreid" / "__init__.py").write_text("#\n", encoding="utf-8")
+            subprocess.run(["git", "add", "."], cwd=sn_root, check=True, capture_output=True)
+            subprocess.run(
+                ["git", "-c", "user.email=t@t", "-c", "user.name=t", "commit", "-m", "i"],
+                cwd=sn_root,
+                check=True,
+                capture_output=True,
+            )
+
+            _build_segment_view(view_dir, with_conflict_track=True)
+            vectors = {7: _unit(1), 10: _unit(2), 12: _unit(4), 268: _unit(3)}
+            _build_baseline(base_dir, vectors=vectors, conflict_pairs={(10, 12)})
+            emb_sum = json.loads(
+                (base_dir / "embeddings" / "embedding_summary.json").read_text()
+            )
+            emb_sum["checkpoint_sha256"] = _sha(ckpt.read_bytes())
+            emb_sum["sn_reid_commit"] = subprocess.check_output(
+                ["git", "-C", str(sn_root), "rev-parse", "HEAD"], text=True
+            ).strip()
+            emb_sum["checkpoint_path"] = str(ckpt)
+            _write_json(base_dir / "embeddings" / "embedding_summary.json", emb_sum)
+
+            decisions_path = tmp_path / "decisions.yaml"
+            decisions_path.write_text(yaml.safe_dump(_mini_decisions()), encoding="utf-8")
+            frames = [
+                np.full((160, 160, 3), fill_value=(i * 3) % 200, dtype=np.uint8)
+                for i in range(60)
+            ]
+
+            result = run_segmented_reid_regression(
+                video=video,
+                segment_view_dir=view_dir,
+                baseline_run_dir=base_dir,
+                segmentation_policy=POLICY,
+                segment_decisions=decisions_path,
+                crop_config=CROP_CFG,
+                reid_config=REID_CFG,
+                regression_config=REG_CFG,
+                sn_reid_root=sn_root,
+                checkpoint=ckpt,
+                output_dir=out_dir,
+                overwrite=False,
+                open_capture=lambda _path: FakeCapture(frames),
+                video_size=(160, 160),
+                model_builder=lambda model_name=None: DeterministicModel(),
+                weight_loader=lambda model, path: None,
+            )
+            self.assertEqual(result["status"], "ok")
+            summary = json.loads((out_dir / SUMMARY_NAME).read_text(encoding="utf-8"))
+            # unaffected pairs among reused {10, 12, 268}: (10,12) conflict,
+            # (10,268) and (12,268) rank-eligible
+            self.assertEqual(summary["unaffected_baseline_pair_count"], 3)
+            self.assertEqual(summary["unaffected_rank_eligible_pair_count"], 2)
+            self.assertEqual(summary["unaffected_exact_frame_conflict_pair_count"], 1)
+            self.assertEqual(summary["unaffected_pair_similarity_match_count"], 3)
+            self.assertEqual(summary["unaffected_pair_similarity_mismatch_count"], 0)
+            self.assertEqual(summary["unaffected_missing_nonconflict_candidate_count"], 0)
+            self.assertEqual(summary["similarity_threshold"], None)
+            self.assertEqual(summary["automatic_link_count"], 0)
+            self.assertEqual(summary["automatic_reject_count"], 0)
+            self.assertEqual(summary["component_building_count"], 0)
+
+            candidates = [
+                json.loads(l)
+                for l in (out_dir / SEGMENT_CANDIDATES_NAME).read_text().splitlines()
+                if l.strip()
+            ]
+            conflict_cand = next(
+                c
+                for c in candidates
+                if {c["segment_id_a"], c["segment_id_b"]} == {"raw_10_full", "raw_12_full"}
+            )
+            self.assertTrue(conflict_cand["exact_same_frame_overlap"])
+            self.assertIsNone(conflict_cand["cosine_similarity"])
+            self.assertIsNone(conflict_cand["rank"])
+            ranked_pairs = {
+                (c["segment_id_a"], c["segment_id_b"])
+                for c in candidates
+                if c["rank"] is not None
+            }
+            self.assertNotIn(("raw_10_full", "raw_12_full"), ranked_pairs)
+            self.assertEqual(summary["ranked_candidate_count"], len(ranked_pairs))
+
+            deltas = [
+                json.loads(l)
+                for l in (out_dir / PAIR_DELTAS_NAME).read_text().splitlines()
+                if l.strip()
+            ]
+            conflict_deltas = [
+                d for d in deltas if d["delta_kind"] == "unaffected_exact_frame_conflict"
+            ]
+            self.assertEqual(len(conflict_deltas), 1)
+            row = conflict_deltas[0]
+            self.assertTrue(row["hard_rejected"])
+            self.assertIsNone(row["segmented_rank"])
+            self.assertFalse(row["segmented_ranked_candidate_available"])
+            self.assertTrue(row["similarity_match"])
+            self.assertIsNone(row["automatic_link_decision"])
+            self.assertIsNone(row["component_assignment"])
+            self.assertFalse(row["accuracy_claimed"])
+            # normal unaffected pairs unchanged
+            normal = [d for d in deltas if d["delta_kind"] == "unaffected_reused_pair"]
+            self.assertEqual(len(normal), 2)
+            self.assertTrue(all(d["similarity_match"] for d in normal))
+            # component audit policy unchanged
+            audit = summary["existing_component_audit"]
+            self.assertEqual(audit["raw_component"], [231, 635])
+            self.assertFalse(audit["raw_231_s01_inherits_component"])
+            self.assertFalse(audit["raw_231_s02_automatically_links_to_635"])
 
 
 class ForbiddenImportTests(unittest.TestCase):

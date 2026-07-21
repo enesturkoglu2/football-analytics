@@ -878,6 +878,8 @@ def build_pair_deltas(
     segment_candidates: Sequence[Mapping[str, Any]],
     entity_by_segment: Mapping[str, Mapping[str, Any]],
     split_parents: set[int],
+    vectors_by_segment: Mapping[str, np.ndarray],
+    baseline_vectors_by_track: Mapping[int, np.ndarray],
 ) -> list[dict[str, Any]]:
     deltas: list[dict[str, Any]] = []
     reused_segments = {
@@ -891,6 +893,10 @@ def build_pair_deltas(
             continue
         seg_a = f"raw_{a}_full"
         seg_b = f"raw_{b}_full"
+        if seg_a not in entity_by_segment or seg_b not in entity_by_segment:
+            raise SegmentRegressionError(
+                f"unaffected baseline pair has no mapped full segments: {a},{b}"
+            )
         if seg_a not in reused_segments or seg_b not in reused_segments:
             continue
         sid_x, sid_y = (seg_a, seg_b) if seg_a < seg_b else (seg_b, seg_a)
@@ -903,7 +909,83 @@ def build_pair_deltas(
             None,
         )
         base_sim = brow.get("cosine_similarity")
-        if match is None or match.get("cosine_similarity") is None or base_sim is None:
+        if match is None:
+            raise SegmentRegressionError(
+                f"unaffected reused pair missing segmented candidate: {a},{b}"
+            )
+        seg_overlap = match.get("exact_same_frame_overlap")
+        if not isinstance(seg_overlap, bool):
+            raise SegmentRegressionError(
+                "segmented pair hard-reject provenance is undetermined for "
+                f"unaffected pair ({a},{b})"
+            )
+        base_conflict = bool(brow.get("exact_frame_conflict"))
+        if base_conflict is not seg_overlap:
+            raise SegmentRegressionError(
+                f"exact-frame conflict flag mismatch for unaffected pair ({a},{b}): "
+                f"baseline={base_conflict} segmented={seg_overlap}"
+            )
+        if base_conflict:
+            # Stage 4B baseline keeps a similarity value on hard-rejected
+            # exact-conflict rows, while segmented candidates null it out.
+            # Audit the reused vectors directly instead of requiring a
+            # ranked segmented candidate; the hard reject is preserved.
+            vec_a = vectors_by_segment.get(seg_a)
+            vec_b = vectors_by_segment.get(seg_b)
+            base_vec_a = baseline_vectors_by_track.get(a)
+            base_vec_b = baseline_vectors_by_track.get(b)
+            if vec_a is None or vec_b is None or base_vec_a is None or base_vec_b is None:
+                raise SegmentRegressionError(
+                    f"reused embedding vectors unavailable for exact-conflict "
+                    f"unaffected pair ({a},{b})"
+                )
+            if not np.array_equal(vec_a, base_vec_a) or not np.array_equal(
+                vec_b, base_vec_b
+            ):
+                raise SegmentRegressionError(
+                    f"reused vector differs from baseline raw embedding for "
+                    f"exact-conflict unaffected pair ({a},{b})"
+                )
+            audit_sim = float(cosine_similarity(vec_a, vec_b))
+            if not math.isfinite(audit_sim):
+                raise SegmentRegressionError(
+                    f"non-finite audit cosine for exact-conflict pair ({a},{b})"
+                )
+            sim_match: bool | None = None
+            if base_sim is not None:
+                if abs(audit_sim - float(base_sim)) > _SIM_ATOL:
+                    raise SegmentRegressionError(
+                        f"unaffected exact-conflict audit cosine mismatch for "
+                        f"({a},{b}): baseline={base_sim} audit={audit_sim}"
+                    )
+                sim_match = True
+            deltas.append(
+                {
+                    "delta_kind": "unaffected_exact_frame_conflict",
+                    "baseline_track_id_a": a,
+                    "baseline_track_id_b": b,
+                    "baseline_exact_frame_conflict": True,
+                    "baseline_cosine_similarity": (
+                        float(base_sim) if base_sim is not None else None
+                    ),
+                    "segment_id_a": sid_x,
+                    "segment_id_b": sid_y,
+                    "segmented_exact_same_frame_overlap": True,
+                    "exact_frame_overlap_count": match.get("exact_frame_overlap_count"),
+                    "segmented_ranked_candidate_available": False,
+                    "segmented_rank": None,
+                    "hard_rejected": True,
+                    "hard_reject_reason": "exact_same_frame_overlap",
+                    "reused_vector_audit_cosine": audit_sim,
+                    "similarity_match": sim_match,
+                    "automatic_link_decision": None,
+                    "automatic_reject_decision": None,
+                    "component_assignment": None,
+                    "accuracy_claimed": False,
+                }
+            )
+            continue
+        if match.get("cosine_similarity") is None or base_sim is None:
             raise SegmentRegressionError(
                 f"unaffected reused pair missing segmented candidate: {a},{b}"
             )
@@ -1358,8 +1440,13 @@ def run_segmented_reid_regression(
             segment_candidates=candidates,
             entity_by_segment=entity_by_segment,
             split_parents=split_parents,
+            vectors_by_segment=vectors_by_segment,
+            baseline_vectors_by_track=baseline["vectors_by_track"],
         )
         unaffected = [d for d in deltas if d["delta_kind"] == "unaffected_reused_pair"]
+        unaffected_conflict = [
+            d for d in deltas if d["delta_kind"] == "unaffected_exact_frame_conflict"
+        ]
         affected = [d for d in deltas if d["delta_kind"] == "affected_baseline_pair"]
         same_parent_deltas = [
             d for d in deltas if d["delta_kind"] == "same_parent_segment_pair"
@@ -1480,9 +1567,13 @@ def run_segmented_reid_regression(
             "automatic_link_count": 0,
             "automatic_reject_count": 0,
             "component_building_count": 0,
-            "unaffected_baseline_pair_count": len(unaffected),
-            "unaffected_pair_similarity_match_count": len(unaffected),
+            "unaffected_baseline_pair_count": len(unaffected) + len(unaffected_conflict),
+            "unaffected_rank_eligible_pair_count": len(unaffected),
+            "unaffected_exact_frame_conflict_pair_count": len(unaffected_conflict),
+            "unaffected_pair_similarity_match_count": len(unaffected)
+            + sum(1 for d in unaffected_conflict if d["similarity_match"] is True),
             "unaffected_pair_similarity_mismatch_count": 0,
+            "unaffected_missing_nonconflict_candidate_count": 0,
             "affected_baseline_pair_count": len(affected),
             "affected_segment_pair_count": sum(
                 int(d["replacement_segment_pair_count"]) for d in affected
