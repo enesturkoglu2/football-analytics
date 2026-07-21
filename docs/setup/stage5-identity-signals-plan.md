@@ -6,8 +6,10 @@
 - **Stage 5B status:**
   `visually_validated_measurement_baseline_with_track_impurity_findings`
   (completed measurement + visual validation)
-- **Next technical gate:** Stage 5B3 — raw-track purity and within-track
-  kit-change audit
+- **Stage 5B3 status:**
+  `visually_validated_manual_segment_plan_not_applied`
+- **Next technical gate:** Stage 5B3F — non-destructive manual segment-view
+  implementation
 - **Focused target-player gate:** Stage 5D
 - **Pitch-position / GameState:** Stage 6 (separate from Stage 5)
 - **Identity-signals policy:** `configs/reid/identity_signals_stage5.yaml`
@@ -15,12 +17,21 @@
 - **Kit measurement config:** `configs/reid/kit_descriptor_stage5b.yaml`
 - **Kit visual-validation policy:**
   `configs/reid/kit_visual_validation_policy_stage5b.yaml`
+- **Track purity audit config:**
+  `configs/reid/track_purity_audit_stage5b3.yaml`
+- **Manual segmentation policy:**
+  `configs/reid/manual_track_segmentation_policy_stage5b3.yaml`
+- **Manual segment decisions (plan only):**
+  `configs/reid/manual_track_segment_decisions_stage5b3.yaml`
 - **Quality visual validation:** `docs/setup/stage5a-quality-visual-validation.md`
 - **Kit visual validation:** [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)
+- **Full-observation purity visual validation:**
+  [stage5b3d-full-observation-visual-validation.md](stage5b3d-full-observation-visual-validation.md)
 - **Focused-player / pitch roadmap:** [focused-player-and-pitch-position-roadmap.md](focused-player-and-pitch-position-roadmap.md)
 - **Stage 4B baseline:** `completed_baseline` (commit `76ede91`)
 - **Quality measurement commit:** `d6122d0`
 - **Kit measurement commit:** `777cc43`
+- **Purity audit commit:** `f73aef7`
 
 Stage 5A1 originally froze design/policy only. Stage 5A2/5A3 later
 implemented measurement and visual validation without selecting a
@@ -37,6 +48,11 @@ validation. Absolute color families remain audit-only. Within-track kit
 change is impurity-risk evidence; raw tracks are **not** atomic identity
 guarantees. No team assignment, clustering, auto-split, or global-ID
 rewrite was enabled.
+
+Stage 5B3A–5B3D later implemented measurement-only purity audit, real
+run, selected-crop transition review, and full-observation localization
+review. Stage 5B3E freezes a **manual non-destructive segment plan**
+that is **not applied** yet. Raw tracks remain immutable.
 
 ## 1. Goal
 
@@ -194,7 +210,13 @@ Rules:
 | **5B0** | focused-player + pitch-position roadmap (docs only) | completed |
 | **5B1** | coarse team/kit descriptor — code + mock tests | completed |
 | **5B2** | `sample.mp4` kit descriptor run and visual validation (dev/reference only) | completed |
-| **5B3** | raw-track purity and within-track kit-change audit | next technical |
+| **5B3A** | raw-track purity audit implementation (code + mock tests) | completed |
+| **5B3B** | real purity measurement run on full Stage 4B/5B outputs | completed |
+| **5B3C** | selected-crop transition visual review panels | completed |
+| **5B3D** | full-observation visual validation / switch localization review | completed |
+| **5B3E** | manual segment plan and policy freeze (docs/config only) | completed |
+| **5B3F** | non-destructive manual segment-view implementation | next technical |
+| **5B3G** | segmented crop/embedding/ReID regression run | pending |
 | **5C1** | jersey-number visibility audit — **no OCR model yet** | pending |
 | **5C2** | jersey-number extraction baseline selection — OCR/model decision needs separate approval | pending |
 | **5D** | focused target-player enrollment and gallery design (`target_A` / `target_B` / `non_target` / `unknown`) | pending |
@@ -216,8 +238,17 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
 
 - **5A** crop quality — completed
 - **5B** coarse team/kit measurement + visual validation — completed
-- **5B3** raw-track purity / kit-change audit — next technical gate
-  (safety gate **before** Stage 5C)
+- **5B3A** purity audit implementation — completed
+- **5B3B** real measurement run — completed
+- **5B3C** selected-crop transition visual review — completed
+- **5B3D** full-observation visual validation — completed
+- **5B3E** manual segment plan and policy freeze — completed
+  (status: `visually_validated_manual_segment_plan_not_applied`)
+- **5B3F** non-destructive manual segment-view implementation — next
+- **5B3G** segmented crop/embedding/ReID regression run — pending
+  (old raw-track baseline vs segmented-track result on `sample.mp4`
+  development/reference; no raw-track in-place mutation; no automatic
+  segment merging)
 - **5C** jersey-number visibility audit
 - **5D** focused target-player enrollment / gallery
 - **5E** pair-level fusion + manual-review ranking
@@ -252,7 +283,6 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
 - Accepted Stage 4B component `[231, 635]` requires future purity review;
   not auto-reversed
 - `sample.mp4` remains development / reference only
-- Next technical gate: **Stage 5B3 raw-track purity and kit-change audit**
 
 ### Stage 5B1 guardrails (retained)
 
@@ -262,20 +292,42 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
 - Kit similarity is **not** identity proof
 - Must not produce any automatic link or hard reject
 
-### Stage 5B3 guardrails (preview)
+### Stage 5B3 completion notes
 
-When Stage 5B3 is approved separately:
+- Stage 5B3A purity audit implementation: **completed**
+- Stage 5B3B real measurement run: **completed**
+- Stage 5B3C selected-crop transition visual review: **completed**
+- Stage 5B3D full-observation visual validation: **completed**
+  (15 focus tracks, 1329 raw observations, 22 windows; no interpolation)
+- Stage 5B3E manual segment plan + policy freeze: **completed**
+- Stage 5B3 status:
+  **`visually_validated_manual_segment_plan_not_applied`**
+- Manual plan: 13 split candidates, 2 no-split contamination controls,
+  15 probable switch events (11 gap-bounded, 2 overlap-ambiguous,
+  2 adjacent-observation) — **not** ground truth
+- Raw tracks immutable; plan **not applied**; no exact split decision
+  written into tracking outputs
+- `[231, 635]` unchanged; only future `raw_231_s02` may be re-reviewed
+  against `635`; `raw_231_s01` must not inherit the component
+- Next technical gate: **Stage 5B3F non-destructive manual segment-view**
+- Later: **Stage 5B3G** segmented crop/embedding/ReID regression test
+  on real video (`sample.mp4` development/reference), comparing old
+  raw-track baseline vs segmented-track result without mutating raw
+  tracks or auto-merging segments
+- Stage 5B3 remains a **safety gate before Stage 5C** jersey-number
+  visibility
 
-- Frame-ordered within-track continuous kit-change audit
-- Change-point candidates + contamination/quality context
-- Manual split-review shortlist only
+### Stage 5B3 guardrails (retained)
+
 - Automatic split = **false**
 - Automatic track deletion = **false**
 - Global ID rewrite = **false**
 - Team assignment = **false**
 - Threshold = **null**
 - Manual review required
-- Stage 5B3 is a **safety gate before Stage 5C** jersey-number visibility
+- No identity-switch / track-purity ground truth
+- No accuracy claim from manual visual observations
+- Frame-range semantics: existing observations only; no interpolation
 
 ### Stage 5D / Stage 6 roadmap notes (preview)
 
@@ -415,6 +467,7 @@ audited linking inputs. Until fusion is explicitly enabled and approved:
 - `docs/setup/reid-stage4b-schema-decisions.md`
 - `docs/setup/stage5a-quality-visual-validation.md`
 - [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)
+- [stage5b3d-full-observation-visual-validation.md](stage5b3d-full-observation-visual-validation.md)
 - [focused-player-and-pitch-position-roadmap.md](focused-player-and-pitch-position-roadmap.md)
 - `configs/reid/linking_policy_stage4b.yaml`
 - `configs/reid/crop_selection_stage4b.yaml`
@@ -422,3 +475,6 @@ audited linking inputs. Until fusion is explicitly enabled and approved:
 - `configs/reid/crop_quality_policy_stage5a.yaml`
 - `configs/reid/kit_descriptor_stage5b.yaml`
 - `configs/reid/kit_visual_validation_policy_stage5b.yaml`
+- `configs/reid/track_purity_audit_stage5b3.yaml`
+- `configs/reid/manual_track_segmentation_policy_stage5b3.yaml`
+- `configs/reid/manual_track_segment_decisions_stage5b3.yaml`

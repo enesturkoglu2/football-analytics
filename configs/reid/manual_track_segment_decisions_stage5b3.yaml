@@ -1,0 +1,532 @@
+# Stage 5B3E — Manual track segment decisions (plan only; not applied)
+# Source review: docs/setup/stage5b3d-full-observation-visual-validation.md
+#
+# Visually reviewed non-destructive segment plan. Does not mutate
+# tracks.jsonl, crops, embeddings, or global_id_map.
+
+schema_version: reid_manual_track_segment_decisions_v1
+status: visually_reviewed_plan_not_applied
+
+source_raw_tracks: outputs/tracking/full/tracks.jsonl
+source_visual_review: >-
+  outputs/reid/full_stage4b/purity_localization_review_stage5b3d/review_index.json
+
+automatic_application_enabled: false
+manual_visual_review_is_ground_truth: false
+raw_tracks_mutated: false
+global_id_map_changed: false
+
+tracks:
+  - raw_track_id: 3
+    decision: manual_split_candidate
+    evidence_strength: high
+    probable_switch_event_count: 1
+    manual_split_candidate: true
+    too_sparse_for_track_embedding: false
+    ambiguous_existing_observation_frames: []
+    unobserved_gap_ranges:
+      - [54, 64]
+    segments:
+      - segment_id: raw_3_s01
+        raw_track_id: 3
+        frame_min: 0
+        frame_max: 53
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_3_s02
+        raw_track_id: 3
+        frame_min: 65
+        frame_max: 68
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+    boundaries:
+      - last_segment_frame: 53
+        next_segment_frame: 65
+        boundary_type: gap_bounded
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+    notes: >-
+      Yellow number-5-like appearance to white number-8-like appearance.
+      Exact switch frame unresolved across unobserved gap 54-64.
+
+  - raw_track_id: 7
+    decision: manual_split_candidate
+    evidence_strength: high
+    probable_switch_event_count: 2
+    manual_split_candidate: true
+    too_sparse_for_track_embedding: false
+    ambiguous_existing_observation_frames: [155, 156, 157, 158]
+    unobserved_gap_ranges:
+      - [165, 169]
+    segments:
+      - segment_id: raw_7_s01
+        raw_track_id: 7
+        frame_min: 0
+        frame_max: 154
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_7_s02
+        raw_track_id: 7
+        frame_min: 159
+        frame_max: 164
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_7_s03
+        raw_track_id: 7
+        frame_min: 170
+        frame_max: 255
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+    boundaries:
+      - last_segment_frame: 154
+        next_segment_frame: 159
+        boundary_type: overlap_ambiguous
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+      - last_segment_frame: 164
+        next_segment_frame: 170
+        boundary_type: gap_bounded
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+    notes: >-
+      White appearance, short yellow hijack, then white appearance again.
+      Frames 155-158 remain unassigned. Segments s01 and s03 must not be
+      automatically merged even if they may be the same physical player.
+
+  - raw_track_id: 31
+    decision: manual_split_candidate
+    evidence_strength: high
+    probable_switch_event_count: 1
+    manual_split_candidate: true
+    too_sparse_for_track_embedding: false
+    ambiguous_existing_observation_frames: []
+    unobserved_gap_ranges:
+      - [252, 255]
+    segments:
+      - segment_id: raw_31_s01
+        raw_track_id: 31
+        frame_min: 24
+        frame_max: 251
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_31_s02
+        raw_track_id: 31
+        frame_min: 256
+        frame_max: 273
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+    boundaries:
+      - last_segment_frame: 251
+        next_segment_frame: 256
+        boundary_type: gap_bounded
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+    notes: White to yellow across unobserved gap 252-255.
+
+  - raw_track_id: 38
+    decision: manual_split_candidate
+    evidence_strength: high
+    probable_switch_event_count: 1
+    manual_split_candidate: true
+    too_sparse_for_track_embedding: false
+    ambiguous_existing_observation_frames: []
+    unobserved_gap_ranges:
+      - [63, 66]
+    segments:
+      - segment_id: raw_38_s01
+        raw_track_id: 38
+        frame_min: 32
+        frame_max: 62
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_38_s02
+        raw_track_id: 38
+        frame_min: 67
+        frame_max: 169
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+    boundaries:
+      - last_segment_frame: 62
+        next_segment_frame: 67
+        boundary_type: gap_bounded
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+    notes: Yellow number-5-like to white across unobserved gap 63-66.
+
+  - raw_track_id: 138
+    decision: manual_split_candidate
+    evidence_strength: high
+    probable_switch_event_count: 1
+    manual_split_candidate: true
+    too_sparse_for_track_embedding: false
+    ambiguous_existing_observation_frames: []
+    unobserved_gap_ranges:
+      - [233, 248]
+    segments:
+      - segment_id: raw_138_s01
+        raw_track_id: 138
+        frame_min: 160
+        frame_max: 232
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_138_s02
+        raw_track_id: 138
+        frame_min: 249
+        frame_max: 273
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+    boundaries:
+      - last_segment_frame: 232
+        next_segment_frame: 249
+        boundary_type: gap_bounded
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+    notes: Yellow to white across unobserved gap 233-248.
+
+  - raw_track_id: 177
+    decision: manual_split_candidate
+    evidence_strength: medium
+    probable_switch_event_count: 1
+    manual_split_candidate: true
+    too_sparse_for_track_embedding: true
+    ambiguous_existing_observation_frames: []
+    unobserved_gap_ranges:
+      - [213, 221]
+    segments:
+      - segment_id: raw_177_s01
+        raw_track_id: 177
+        frame_min: 212
+        frame_max: 212
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_177_s02
+        raw_track_id: 177
+        frame_min: 222
+        frame_max: 222
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+    boundaries:
+      - last_segment_frame: 212
+        next_segment_frame: 222
+        boundary_type: gap_bounded
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+    notes: >-
+      White to yellow; only one observation per segment.
+      Too sparse for reliable track embedding.
+
+  - raw_track_id: 213
+    decision: manual_split_candidate
+    evidence_strength: high
+    probable_switch_event_count: 1
+    manual_split_candidate: true
+    too_sparse_for_track_embedding: false
+    ambiguous_existing_observation_frames: []
+    unobserved_gap_ranges:
+      - [252, 262]
+    segments:
+      - segment_id: raw_213_s01
+        raw_track_id: 213
+        frame_min: 240
+        frame_max: 251
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_213_s02
+        raw_track_id: 213
+        frame_min: 263
+        frame_max: 298
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+    boundaries:
+      - last_segment_frame: 251
+        next_segment_frame: 263
+        boundary_type: gap_bounded
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+    notes: White to yellow across unobserved gap 252-262.
+
+  - raw_track_id: 231
+    decision: manual_split_candidate
+    evidence_strength: high
+    probable_switch_event_count: 1
+    manual_split_candidate: true
+    too_sparse_for_track_embedding: false
+    ambiguous_existing_observation_frames: [281, 282, 283, 284]
+    unobserved_gap_ranges: []
+    segments:
+      - segment_id: raw_231_s01
+        raw_track_id: 231
+        frame_min: 253
+        frame_max: 280
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_231_s02
+        raw_track_id: 231
+        frame_min: 285
+        frame_max: 391
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+    boundaries:
+      - last_segment_frame: 280
+        next_segment_frame: 285
+        boundary_type: overlap_ambiguous
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+    notes: >-
+      White number-9-like to yellow number-17-like. Frames 281-284 remain
+      unassigned. Existing component [231,635] unchanged. Only future
+      segment raw_231_s02 may be re-reviewed against 635. raw_231_s01 must
+      not automatically inherit the component. No automatic reversal.
+
+  - raw_track_id: 268
+    decision: no_split_contamination_control
+    evidence_strength: medium
+    probable_switch_event_count: 0
+    manual_split_candidate: false
+    too_sparse_for_track_embedding: false
+    ambiguous_existing_observation_frames: []
+    unobserved_gap_ranges: []
+    segments: []
+    boundaries: []
+    raw_track_preserved: true
+    notes: >-
+      Target bbox remained on white player across existing observations
+      268-358. Nearby yellow player/background explains descriptor
+      difference. Not a manual split candidate.
+
+  - raw_track_id: 354
+    decision: manual_split_candidate
+    evidence_strength: high
+    probable_switch_event_count: 1
+    manual_split_candidate: true
+    too_sparse_for_track_embedding: false
+    ambiguous_existing_observation_frames: []
+    unobserved_gap_ranges:
+      - [343, 371]
+    segments:
+      - segment_id: raw_354_s01
+        raw_track_id: 354
+        frame_min: 309
+        frame_max: 342
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_354_s02
+        raw_track_id: 354
+        frame_min: 372
+        frame_max: 374
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+    boundaries:
+      - last_segment_frame: 342
+        next_segment_frame: 372
+        boundary_type: gap_bounded
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+    notes: Yellow to white number-8-like across unobserved gap 343-371.
+
+  - raw_track_id: 375
+    decision: manual_split_candidate
+    evidence_strength: high
+    probable_switch_event_count: 1
+    manual_split_candidate: true
+    too_sparse_for_track_embedding: false
+    ambiguous_existing_observation_frames: []
+    unobserved_gap_ranges:
+      - [362, 388]
+    segments:
+      - segment_id: raw_375_s01
+        raw_track_id: 375
+        frame_min: 326
+        frame_max: 361
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_375_s02
+        raw_track_id: 375
+        frame_min: 389
+        frame_max: 391
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+    boundaries:
+      - last_segment_frame: 361
+        next_segment_frame: 389
+        boundary_type: gap_bounded
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+    notes: White to yellow across unobserved gap 362-388.
+
+  - raw_track_id: 414
+    decision: manual_split_candidate
+    evidence_strength: high
+    probable_switch_event_count: 1
+    manual_split_candidate: true
+    too_sparse_for_track_embedding: false
+    ambiguous_existing_observation_frames: []
+    unobserved_gap_ranges:
+      - [380, 386]
+    segments:
+      - segment_id: raw_414_s01
+        raw_track_id: 414
+        frame_min: 360
+        frame_max: 379
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_414_s02
+        raw_track_id: 414
+        frame_min: 387
+        frame_max: 391
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+    boundaries:
+      - last_segment_frame: 379
+        next_segment_frame: 387
+        boundary_type: gap_bounded
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+    notes: >-
+      White number-10-like to yellow number-26-like across unobserved gap
+      380-386.
+
+  - raw_track_id: 418
+    decision: manual_split_candidate
+    evidence_strength: medium
+    probable_switch_event_count: 1
+    manual_split_candidate: true
+    too_sparse_for_track_embedding: false
+    ambiguous_existing_observation_frames: []
+    unobserved_gap_ranges:
+      - [365, 386]
+    segments:
+      - segment_id: raw_418_s01
+        raw_track_id: 418
+        frame_min: 363
+        frame_max: 364
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_418_s02
+        raw_track_id: 418
+        frame_min: 387
+        frame_max: 388
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+    boundaries:
+      - last_segment_frame: 364
+        next_segment_frame: 387
+        boundary_type: gap_bounded
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+    notes: White to yellow across unobserved gap 365-386.
+
+  - raw_track_id: 514
+    decision: manual_split_candidate
+    evidence_strength: high
+    probable_switch_event_count: 2
+    manual_split_candidate: true
+    too_sparse_for_track_embedding: false
+    ambiguous_existing_observation_frames: []
+    unobserved_gap_ranges: []
+    segments:
+      - segment_id: raw_514_s01
+        raw_track_id: 514
+        frame_min: 440
+        frame_max: 454
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_514_s02
+        raw_track_id: 514
+        frame_min: 455
+        frame_max: 503
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+      - segment_id: raw_514_s03
+        raw_track_id: 514
+        frame_min: 504
+        frame_max: 587
+        include_existing_observations_only: true
+        proven_physical_identity: false
+        team_assignment: null
+        global_id: null
+    boundaries:
+      - last_segment_frame: 454
+        next_segment_frame: 455
+        boundary_type: adjacent_observations
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+      - last_segment_frame: 503
+        next_segment_frame: 504
+        boundary_type: adjacent_observations
+        exact_real_world_switch_frame_known: false
+        automatic_split_decision: false
+    notes: >-
+      White number-8-like to yellow number-30-like to white number-3-like.
+      Boundaries 454/455 and 503/504 are adjacent existing observations.
+      Still not identity ground truth.
+
+  - raw_track_id: 590
+    decision: no_split_contamination_control
+    evidence_strength: medium
+    probable_switch_event_count: 0
+    manual_split_candidate: false
+    too_sparse_for_track_embedding: false
+    ambiguous_existing_observation_frames: []
+    unobserved_gap_ranges: []
+    segments: []
+    boundaries: []
+    raw_track_preserved: true
+    notes: >-
+      Target bbox remained on white player across existing observations
+      568-743. Yellow player entered crop/nearby region late. Not a
+      manual split candidate.

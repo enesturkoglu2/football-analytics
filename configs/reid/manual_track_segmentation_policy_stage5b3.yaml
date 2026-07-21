@@ -1,0 +1,65 @@
+# Stage 5B3E — Manual non-destructive raw-track segmentation policy
+# Source review: docs/setup/stage5b3d-full-observation-visual-validation.md
+#
+# Freezes the visually reviewed segment plan. Does not implement or apply
+# segmentation. Raw tracks remain immutable.
+
+schema_version: reid_manual_track_segmentation_policy_v1
+source_review: docs/setup/stage5b3d-full-observation-visual-validation.md
+
+stage_status: visually_validated_manual_segment_plan
+
+raw_tracks:
+  immutable: true
+  source_observations_preserved: true
+  in_place_mutation_allowed: false
+  interpolation_allowed: false
+  deletion_allowed: false
+
+segmentation:
+  implementation_available: false
+  non_destructive_segment_view_required: true
+  automatic_split_enabled: false
+  automatic_boundary_selection_enabled: false
+  manual_decisions_required: true
+  segment_ids_preserve_raw_track_provenance: true
+  frame_range_semantics: existing_observations_only
+  ambiguous_observations_may_be_unassigned: true
+  missing_frames_create_observations: false
+
+evaluation:
+  manual_visual_observation_is_ground_truth: false
+  identity_switch_ground_truth_available: false
+  track_purity_ground_truth_available: false
+  accuracy_claim_allowed: false
+
+reid:
+  mixed_raw_track_embeddings_final_evaluation_allowed: false
+  affected_segments_require_new_crop_selection: true
+  affected_segments_require_new_embeddings: true
+  unaffected_tracks_may_be_preserved: true
+  automatic_segment_merge_enabled: false
+  automatic_segment_link_enabled: false
+
+global_identity:
+  global_id_rewrite_enabled: false
+  existing_stage4b_output_preserved: true
+  accepted_components_automatically_modified: false
+
+existing_component_audit:
+  raw_component:
+    - 231
+    - 635
+  unchanged: true
+  future_review_segment_id: raw_231_s02
+  raw_231_s1_inherits_component: false
+  automatic_reversal: false
+
+no_split_controls:
+  - 268
+  - 590
+
+next_gate:
+  stage: Stage 5B3F
+  name: non_destructive_manual_segment_view
+  real_segmentation_run_enabled: false
