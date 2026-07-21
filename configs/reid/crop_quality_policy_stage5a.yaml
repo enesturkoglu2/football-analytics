@@ -1,0 +1,72 @@
+# Stage 5A crop-quality usage policy — visual-validation freeze (5A3C)
+# Source review: docs/setup/stage5a-quality-visual-validation.md
+#
+# Freezes measurement-baseline usage rules only.
+# Does not enable thresholds, exclusion, labeling, or embedding weighting.
+
+schema_version: reid_crop_quality_policy_v1
+source_review: docs/setup/stage5a-quality-visual-validation.md
+
+stage_status: visually_validated_measurement_baseline
+
+quality_threshold: null
+contamination_threshold: null
+
+automatic_quality_labeling_enabled: false
+automatic_contamination_labeling_enabled: false
+automatic_exclusion_enabled: false
+embedding_weighting_enabled: false
+preserve_all_raw_crops: true
+
+tracking_bbox_overlap:
+  enabled: true
+  usage: audit_and_manual_review_ranking
+  hard_reject_enabled: false
+  zero_overlap_is_clean_proof: false
+  coverage_is_visible_pixel_fraction: false
+  coverage_is_severity_calibrated: false
+  detects_untracked_people: false
+
+sharpness:
+  metric: laplacian_variance_native_crop
+  usage: size_stratified_audit_and_ranking
+  global_threshold_allowed: false
+  size_stratification_required: true
+  hard_reject_enabled: false
+  automatic_exclusion_enabled: false
+  high_value_is_identity_usability_proof: false
+
+frame_edge:
+  usage: audit_only
+  hard_reject_enabled: false
+  automatic_exclusion_enabled: false
+  proves_body_truncation: false
+
+region_specific_quality:
+  required_for_future_signals: true
+  kit_region: torso
+  jersey_number_region: torso_or_back
+  crop_level_binary_decision_enabled: false
+
+future_quality_signals:
+  subject_domain_validity:
+    implemented: false
+  body_completeness:
+    implemented: false
+  pixel_level_multi_person_contamination:
+    implemented: false
+    model_selected: false
+
+downstream_policy:
+  team_kit:
+    quality_usage: audit_only_until_validated
+  jersey_number:
+    sharpness_usage: future_visibility_ranking_candidate
+  embedding_aggregation:
+    weighting_change_allowed: false
+  linking:
+    automatic_decision_change_allowed: false
+
+evaluation:
+  manual_visual_review_is_ground_truth: false
+  accuracy_claim_allowed: false

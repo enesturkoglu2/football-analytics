@@ -1,13 +1,17 @@
 # Stage 5 — Football ReID auxiliary identity-signals plan (5A1)
 
 - **Date:** 2026-07-21
-- **Gate:** Stage 5A1 — policy and schema planning only
-- **Status:** planning (no product extraction code in this gate)
-- **Policy config:** `configs/reid/identity_signals_stage5.yaml`
+- **Original gate:** Stage 5A1 — policy and schema planning
+- **Stage 5A status:** `visually_validated_measurement_baseline`
+- **Identity-signals policy:** `configs/reid/identity_signals_stage5.yaml`
+- **Crop-quality policy:** `configs/reid/crop_quality_policy_stage5a.yaml`
+- **Quality visual validation:** `docs/setup/stage5a-quality-visual-validation.md`
 - **Stage 4B baseline:** `completed_baseline` (commit `76ede91`)
+- **Quality measurement commit:** `d6122d0`
 
-This gate freezes design and policy only. No OCR/team model download,
-no inference, no pipeline run, no product code, and no commit/push.
+Stage 5A1 originally froze design/policy only. Stage 5A2/5A3 later
+implemented measurement and visual validation without selecting a
+threshold or enabling exclusion.
 
 ## 1. Goal
 
@@ -148,22 +152,46 @@ Rules:
 
 ## 3. Implementation gate order
 
-| Gate | Scope |
-|---|---|
-| **5A1** | identity-signal policy and schema planning *(this gate)* |
-| **5A2** | crop-quality and contamination baseline — code + mock tests |
-| **5A3** | quality smoke/full run on existing `sample.mp4` crops |
-| **5B1** | coarse team/kit descriptor — code + mock tests |
-| **5B2** | `sample.mp4` kit descriptor run and visual validation |
-| **5C1** | jersey-number visibility audit — **no OCR model yet** |
-| **5C2** | jersey-number extraction baseline selection — OCR/model decision needs separate approval |
-| **5D** | pair-level evidence fusion and review ranking |
-| **5E** | golden clips / ground-truth evaluation preparation |
+| Gate | Scope | Status |
+|---|---|---|
+| **5A1** | identity-signal policy and schema planning | completed |
+| **5A2** | crop-quality and contamination baseline — code + mock tests | completed |
+| **5A3** | real full run + visual validation on existing `sample.mp4` crops | completed |
+| **5B1** | coarse team/kit descriptor — code + mock tests | next |
+| **5B2** | `sample.mp4` kit descriptor run and visual validation | pending |
+| **5C1** | jersey-number visibility audit — **no OCR model yet** | pending |
+| **5C2** | jersey-number extraction baseline selection — OCR/model decision needs separate approval | pending |
+| **5D** | pair-level evidence fusion and review ranking | pending |
+| **5E** | golden clips / ground-truth evaluation preparation | pending |
 
 Hair and shoe features:
 
 - Optional enhancement **after** Stage 5D
 - **Not required** for core Stage 5 success
+
+### Stage 5A completion notes
+
+- Stage 5A2 quality measurement implementation: **completed**
+- Stage 5A3 real full run and visual validation: **completed**
+- Stage 5A status: **`visually_validated_measurement_baseline`**
+- No quality/contamination threshold selected (`null`)
+- No automatic exclusion selected
+- No embedding aggregation weighting enabled
+- Tracking bbox overlap is positive-risk evidence only; zero overlap is
+  **not** clean proof
+- Global Laplacian threshold is **prohibited**; size-stratified
+  audit/ranking is allowed
+- Frame-edge contact is **audit only** (not body-completeness proof)
+- Next implementation gate: **Stage 5B1 coarse team/kit descriptor**
+
+### Stage 5B1 guardrails (preview)
+
+When Stage 5B1 is approved separately:
+
+- Use a torso-oriented descriptor
+- Preserve off-pitch / outlier / unknown handling
+- Kit similarity is **not** identity proof
+- Must not produce any automatic link or hard reject
 
 Note: implementation starts with crop quality (5A2) as a foundation for
 downstream kit/number reliability. Identity-evidence priority ranking
@@ -273,6 +301,8 @@ audited linking inputs. Until fusion is explicitly enabled and approved:
 - `docs/setup/reid-stage4b-completion.md`
 - `docs/setup/reid-stage4b-linking-policy.md`
 - `docs/setup/reid-stage4b-schema-decisions.md`
+- `docs/setup/stage5a-quality-visual-validation.md`
 - `configs/reid/linking_policy_stage4b.yaml`
 - `configs/reid/crop_selection_stage4b.yaml`
 - `configs/reid/identity_signals_stage5.yaml`
+- `configs/reid/crop_quality_policy_stage5a.yaml`
