@@ -100,7 +100,10 @@ class SyntheticFixture:
         self.config = root / "config.yaml"
         self.segment_view.mkdir()
         (self.regression / "crops").mkdir(parents=True)
-        (self.baseline / "crops/track_2").mkdir(parents=True)
+        # Stage 4B layout: crop_manifest.jsonl lives in <run>/crops/ and its
+        # crop_relative_path values resolve against that manifest directory,
+        # so physical JPEGs live under the nested <run>/crops/crops/ tree.
+        (self.baseline / "crops/crops/track_2").mkdir(parents=True)
         shutil.copyfile(CONFIG, self.config)
         self._build()
 
@@ -168,7 +171,7 @@ class SyntheticFixture:
         reused_image = np.full((40, 20, 3), 127, dtype=np.uint8)
         cv2.imwrite(str(self.regression / "crops/manual.jpg"), manual_image)
         cv2.imwrite(
-            str(self.baseline / "crops/track_2/reused.jpg"), reused_image
+            str(self.baseline / "crops/crops/track_2/reused.jpg"), reused_image
         )
         manual_crop = {
             "schema_version": "reid_segment_crop_manifest_v1",
@@ -574,7 +577,7 @@ class ProvenanceAndOutputTests(unittest.TestCase):
     def test_collision_overwrite_and_source_immutability(self) -> None:
         sources = [
             self.fixture.regression / "crops/manual.jpg",
-            self.fixture.baseline / "crops/track_2/reused.jpg",
+            self.fixture.baseline / "crops/crops/track_2/reused.jpg",
             self.fixture.segment_view / "track_segments.jsonl",
         ]
         before = {path: hashlib.sha256(path.read_bytes()).hexdigest() for path in sources}
@@ -613,6 +616,150 @@ class ProvenanceAndOutputTests(unittest.TestCase):
             for name in (CROP_SIGNALS_NAME, SEGMENT_SUMMARY_NAME)
         }
         self.assertEqual(first, second)
+
+
+class BaselinePathResolutionTests(unittest.TestCase):
+    """Regression tests for the Stage 4B manifest-directory path contract."""
+
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.root = Path(self.temp.name)
+        self.fixture = SyntheticFixture(self.root)
+        self.manifest_dir = self.fixture.baseline / "crops"
+        self.correct_path = self.manifest_dir / "crops/track_2/reused.jpg"
+        self.wrong_root_path = self.fixture.baseline / "crops/track_2/reused.jpg"
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def _plan(self) -> dict:
+        view = load_segment_view_inputs(self.fixture.segment_view)
+        return build_crop_provenance_plan(
+            segment_view=view,
+            segmented_regression_dir=self.fixture.regression,
+            baseline_run_dir=self.fixture.baseline,
+        )
+
+    def _reused_row(self, plan: dict) -> dict:
+        rows = [
+            row
+            for row in plan["crops"]
+            if row["crop_source_kind"] == "reused_baseline_selected_crop"
+        ]
+        self.assertEqual(len(rows), 1)
+        return rows[0]
+
+    def _rewrite_baseline_relative_path(self, value) -> None:
+        path = self.manifest_dir / "crop_manifest.jsonl"
+        row = json.loads(path.read_text(encoding="utf-8"))
+        row["crop_relative_path"] = value
+        _write_jsonl(path, [row])
+
+    def test_reused_crop_resolves_relative_to_manifest_directory(self) -> None:
+        row = self._reused_row(self._plan())
+        self.assertEqual(
+            Path(row["source_crop_path"]), self.correct_path.resolve()
+        )
+        self.assertEqual(row["segment_id"], "raw_2_full")
+        self.assertEqual(row["raw_track_id"], 2)
+        result = self.fixture.run()
+        self.assertEqual(result["measured_segment_count"], 2)
+        signals = [
+            json.loads(line)
+            for line in (self.fixture.output / CROP_SIGNALS_NAME)
+            .read_text(encoding="utf-8")
+            .splitlines()
+        ]
+        reused = [
+            row
+            for row in signals
+            if row["crop_source_kind"] == "reused_baseline_selected_crop"
+        ]
+        self.assertEqual(len(reused), 1)
+        self.assertEqual(
+            Path(reused[0]["source_crop_path"]), self.correct_path.resolve()
+        )
+
+    def test_baseline_run_root_path_is_not_used(self) -> None:
+        # Only the nested manifest-relative file exists; the flat path that
+        # the pre-fix code would have used must be absent and resolution must
+        # still succeed. This test fails against the old baseline_run_dir bug.
+        self.assertFalse(self.wrong_root_path.exists())
+        self.assertTrue(self.correct_path.is_file())
+        row = self._reused_row(self._plan())
+        self.assertEqual(
+            Path(row["source_crop_path"]), self.correct_path.resolve()
+        )
+
+    def test_wrong_root_decoy_is_not_selected(self) -> None:
+        decoy_image = np.zeros((40, 20, 3), dtype=np.uint8)
+        self.wrong_root_path.parent.mkdir(parents=True, exist_ok=True)
+        cv2.imwrite(str(self.wrong_root_path), decoy_image)
+        self.assertNotEqual(
+            hashlib.sha256(self.wrong_root_path.read_bytes()).hexdigest(),
+            hashlib.sha256(self.correct_path.read_bytes()).hexdigest(),
+        )
+        row = self._reused_row(self._plan())
+        resolved = Path(row["source_crop_path"])
+        self.assertEqual(resolved, self.correct_path.resolve())
+        self.assertNotEqual(resolved, self.wrong_root_path.resolve())
+        self.assertEqual(
+            hashlib.sha256(resolved.read_bytes()).hexdigest(),
+            hashlib.sha256(self.correct_path.read_bytes()).hexdigest(),
+        )
+
+    def test_missing_manifest_relative_file_fails_despite_decoy(self) -> None:
+        self.wrong_root_path.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(self.correct_path, self.wrong_root_path)
+        self.correct_path.unlink()
+        with self.assertRaises(JerseyVisibilityError) as ctx:
+            self._plan()
+        self.assertIn("selected crop file missing", str(ctx.exception))
+
+    def test_unsafe_baseline_relative_paths_are_rejected(self) -> None:
+        outside = self.fixture.baseline / "outside.jpg"
+        shutil.copyfile(self.correct_path, outside)
+        for value in ("../outside.jpg", str(outside.resolve()), "", None):
+            with self.subTest(value=value):
+                self._rewrite_baseline_relative_path(value)
+                with self.assertRaises(JerseyVisibilityError):
+                    self._plan()
+
+    def test_manual_recomputed_crop_resolution_is_unchanged(self) -> None:
+        plan = self._plan()
+        manual = [
+            row
+            for row in plan["crops"]
+            if row["crop_source_kind"] == "recomputed_manual_segment"
+        ]
+        self.assertEqual(len(manual), 1)
+        self.assertEqual(
+            Path(manual[0]["source_crop_path"]),
+            (self.fixture.regression / "crops/manual.jpg").resolve(),
+        )
+
+    def test_mixed_plan_measures_manual_and_reused_segments(self) -> None:
+        plan = self._plan()
+        crop_ids = [str(row["crop_id"]) for row in plan["crops"]]
+        self.assertEqual(len(crop_ids), len(set(crop_ids)))
+        result = self.fixture.run()
+        self.assertEqual(result["total_derived_segment_count"], 3)
+        self.assertEqual(result["measured_segment_count"], 2)
+        self.assertEqual(result["no_selected_crop_segment_count"], 1)
+        segments = [
+            json.loads(line)
+            for line in (self.fixture.output / SEGMENT_SUMMARY_NAME)
+            .read_text(encoding="utf-8")
+            .splitlines()
+        ]
+        by_status = {
+            row["segment_id"]: row["measurement_status"] for row in segments
+        }
+        self.assertEqual(by_status["raw_1_s01"], "measured_selected_crops")
+        self.assertEqual(by_status["raw_2_full"], "measured_selected_crops")
+        self.assertEqual(
+            by_status["raw_3_full"], "no_selected_crop_provenance"
+        )
 
 
 class CliAndSafetyTests(unittest.TestCase):

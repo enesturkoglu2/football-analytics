@@ -608,6 +608,9 @@ def build_crop_provenance_plan(
     )
     baseline_manifest_path = baseline_root / "crops" / "crop_manifest.jsonl"
     baseline_crops = _load_jsonl(baseline_manifest_path)
+    # Stage 4B contract: crop_relative_path resolves against the manifest's
+    # own directory (see embedding.resolve_crop_path), not the run root.
+    baseline_manifest_dir = baseline_manifest_path.parent
 
     segments = segment_view["by_id"]
     entity_by_id: dict[str, dict[str, Any]] = {}
@@ -706,7 +709,9 @@ def build_crop_provenance_plan(
             assigned_crop_ids.add(str(crop_id))
             frame = _require_int(row.get("frame_index"), field=f"{crop_id}.frame_index")
             observation = segment_view["by_segment_frame"].get((sid, frame))
-            path = _safe_crop_path(baseline_root, row.get("crop_relative_path"))
+            path = _safe_crop_path(
+                baseline_manifest_dir, row.get("crop_relative_path")
+            )
             crop_plan.append(
                 {
                     **dict(row),
