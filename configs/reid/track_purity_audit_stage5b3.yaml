@@ -1,0 +1,83 @@
+# Stage 5B3A raw-track purity / within-track kit-change audit — measurement
+# Descriptor transition distances and torso-overlap context only.
+# Not identity-switch labels, team assignment, or automatic splits.
+
+schema_version: reid_track_purity_audit_config_v1
+stage_status: measurement_baseline
+
+automatic_track_split_enabled: false
+automatic_track_delete_enabled: false
+automatic_global_id_rewrite_enabled: false
+automatic_team_assignment_enabled: false
+automatic_link_enabled: false
+automatic_reject_enabled: false
+
+change_threshold: null
+split_threshold: null
+composite_change_score_enabled: false
+manual_review_required: true
+
+chronology:
+  order_by:
+    - frame_index
+    - selection_rank
+    - crop_id
+  duplicate_frame_within_track_allowed: false
+  compare_adjacent_crops_only: true
+  preserve_original_manifest_order_for_provenance: true
+
+descriptor_metrics:
+  color_family_l1_enabled: true
+  hue_histogram_l1_enabled: true
+  saturation_histogram_l1_enabled: true
+  value_histogram_l1_enabled: true
+  lab_mean_distance_enabled: true
+  dominant_family_change_enabled: true
+  chromatic_ratio_difference_enabled: true
+  achromatic_ratio_difference_enabled: true
+
+distance_normalization:
+  histogram_l1_expected_range:
+    - 0.0
+    - 2.0
+  color_family_l1_expected_range:
+    - 0.0
+    - 2.0
+  lab_mean_euclidean_normalized: true
+  lab_uint8_max_distance: 441.6729559300637
+
+torso_tracking_overlap:
+  enabled: true
+  usage: audit_context_only
+  hard_reject_enabled: false
+  automatic_split_enabled: false
+  coverage_threshold: null
+  detects_untracked_people: false
+  visible_pixel_fraction: false
+
+quality_context:
+  copied_for_audit_only: true
+  quality_exclusion_enabled: false
+  quality_weighting_enabled: false
+
+ranking:
+  composite_rank_enabled: false
+  independent_metric_ranks:
+    - color_family_l1
+    - lab_mean_distance_normalized
+    - hue_histogram_l1
+    - saturation_histogram_l1
+    - value_histogram_l1
+  dominant_family_change_is_decision: false
+
+policy:
+  raw_track_is_atomic_identity_guarantee: false
+  within_track_change_is_identity_switch_proof: false
+  no_detected_change_is_purity_proof: false
+  selected_crop_audit_is_full_track_segmentation: false
+  raw_track_ids_preserved: true
+
+evaluation:
+  identity_switch_ground_truth_available: false
+  track_purity_ground_truth_available: false
+  accuracy_claim_allowed: false
