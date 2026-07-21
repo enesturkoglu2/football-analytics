@@ -1,0 +1,99 @@
+# Stage 5B1A coarse team/kit descriptor — measurement baseline
+# Descriptor bin definitions only. Not identity or team decision thresholds.
+
+schema_version: reid_kit_descriptor_config_v1
+stage_status: measurement_baseline
+
+automatic_team_assignment_enabled: false
+forced_two_team_clustering_enabled: false
+automatic_link_enabled: false
+automatic_reject_enabled: false
+kit_similarity_threshold: null
+
+source_region:
+  name: normalized_center_torso
+  x_min_fraction: 0.20
+  x_max_fraction: 0.80
+  y_min_fraction: 0.15
+  y_max_fraction: 0.65
+  resize_enabled: false
+  segmentation_enabled: false
+  background_removal_enabled: false
+
+quality_usage:
+  quality_signals_required: true
+  exclusion_enabled: false
+  weighting_enabled: false
+  copied_for_audit_only: true
+
+histograms:
+  hue_bin_count: 18
+  saturation_bin_count: 8
+  value_bin_count: 8
+  hue_range_opencv:
+    - 0
+    - 180
+  saturation_range:
+    - 0
+    - 256
+  value_range:
+    - 0
+    - 256
+
+chromatic_hue:
+  minimum_saturation: 40
+  minimum_value: 32
+  empty_histogram_behavior: all_zero
+
+coarse_color_families:
+  enabled: true
+  achromatic_saturation_max: 40
+  black_value_max: 50
+  white_value_min: 200
+  high_saturation_min: 160
+  family_order:
+    - black
+    - gray
+    - white
+    - red
+    - orange
+    - yellow
+    - green
+    - cyan
+    - blue
+    - purple
+    - magenta
+  chromatic_hue_ranges:
+    red:
+      - [0, 10]
+      - [170, 179]
+    orange:
+      - [11, 24]
+    yellow:
+      - [25, 35]
+    green:
+      - [36, 85]
+    cyan:
+      - [86, 100]
+    blue:
+      - [101, 130]
+    purple:
+      - [131, 150]
+    magenta:
+      - [151, 169]
+
+track_aggregation:
+  method: equal_weight_mean
+  quality_weighting_enabled: false
+  crop_exclusion_enabled: false
+  preserve_crop_order: true
+
+policy:
+  same_kit_is_identity_proof: false
+  different_kit_hard_reject_enabled: false
+  usage: measurement_audit_and_future_ranking
+  unknown_outlier_preserved: true
+
+evaluation:
+  ground_truth_team_labels_available: false
+  accuracy_claim_allowed: false
