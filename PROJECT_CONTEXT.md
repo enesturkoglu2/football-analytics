@@ -245,20 +245,64 @@ Aşama 4A tamamlandı (SoccerNet ReID altyapı hazırlığı; ürün ReID kodu y
 
 Kurulum kayıtları: `docs/setup/sn-reid-*.md` / `sn-reid-cpu-after-install.*`
 
+Aşama 4B tamamlandı (`completed_baseline`; track-level ReID / manual linking):
+
+- Son ürün commit: `a4b379c` — Implement manual ReID linking pipeline
+- `unittest` 165 test OK (ingest + detection + tracking + ReID)
+- Model / checkpoint (4A ile aynı; SoccerNet-trained değil):
+  - Mimari: `osnet_x1_0`
+  - Checkpoint:
+    `osnet_x1_0_market1501_softmax_256x128.pth.tar`
+  - SHA-256:
+    `2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154`
+  - Eğitim: Market1501 general person ReID
+  - `pretrained=false`; FeatureExtractor kullanılmadı; otomatik indirme yok
+  - sn-reid pin: `621e2b0f2d2a7a3e207b8dd747542b6608bf72db`
+- Ortam sınırı: `football-cv` (crop/aggregate/candidates/linking/tests);
+  `sn-reid-cpu` yalnız embedding inference
+- Full `sample.mp4` sonuçları (`outputs/reid/full_stage4b/`, Git dışı):
+  - 13 309 observation; 276 raw track
+  - 454 crop; 135 crop/embedding track; 141 no-crop
+  - crop embeddings `[454, 512]`; track embeddings `[135, 512]`;
+    aggregation `l2_mean`; float32; L2-normalized
+  - 9 045 candidate pair; exact-frame conflict 1 525;
+    eligible_unthresholded 7 520
+  - `similarity_threshold=null`; `automatic_linking_enabled=false`;
+    cosine yalnız ranking/audit
+  - 42 manual decision; 4 accepted edge
+  - Accepted components:
+    - `[4, 682]` → `global_candidate_id` 4
+    - `[231, 635]` → `global_candidate_id` 231
+    - `[593, 689]` → `global_candidate_id` 593
+    - `[588, 806]` → `global_candidate_id` 588
+  - 4 linked component; 8 linked raw track; 268 singleton
+    (127 embedded unlinked + 141 no-embedding)
+  - 276 raw → 272 global candidate
+  - Final map:
+    `outputs/reid/full_stage4b/linking/global_id_map.jsonl`
+- Ham ByteTrack `track_id` değerleri yeniden yazılmaz
+- ReID accuracy / MOTA / HOTA / IDF1 / ReID mAP yüzdesi hesaplanmadı ve
+  uydurulmadı; global ID'ler candidate kimliktir, kanıtlanmış `player_id`
+  değildir
+- Kapanış raporu: `docs/setup/reid-stage4b-completion.md`
+- Politika / şema:
+  `docs/setup/reid-stage4b-linking-policy.md`,
+  `docs/setup/reid-stage4b-schema-decisions.md`,
+  `configs/reid/crop_selection_stage4b.yaml`,
+  `configs/reid/linking_policy_stage4b.yaml`
+
 ## 8. Sıradaki aşama
 
-Aşama 4B: track-level ReID / linking hattı (henüz kod yok; ayrı onay).
+Aşama 4B baseline kapandı. Önerilen sonraki iyileştirmeler (ayrı onay):
 
-Beklenen yön:
+- Jersey number recognition ve/veya team/kit classification
+- Crop contamination detection
+- Temporal/spatial motion consistency
+- Football-domain ReID fine-tuning
+- Labelled golden clips + resmi değerlendirme metrikleri
 
-- Çoklu crop seçimi ve embedding
-- Track embedding aggregation
-- Similarity ve `global_candidate_id` eşleme
-- Ham ByteTrack `track_id` değerleri korunur; üzerine aday global kimlik
-  katmanı eklenir
-
-Bu aşama henüz aynı/farklı oyuncu başarısını ölçmez. Takım sınıflandırması
-ayrı bir adımdır. Ayrı onay olmadan 4B ürün kodu yazılmayacaktır.
+Takım sınıflandırması ve kalıcı oyuncu kimliği ürün hattı hâlâ ayrı
+aşamalardır. Ayrı onay olmadan yeni ürün kodu yazılmayacaktır.
 
 ## 9. Cursor için zorunlu kurallar
 
@@ -297,12 +341,14 @@ indirilmedi. Checkpoint klasörü:
 
 ## 11. Mevcut öncelik
 
-Aşama 4A (ReID altyapı hazırlığı) tamamlandı. Sıradaki: Aşama 4B
-track-level ReID/linking (ayrı onay):
+Aşama 4B track-level ReID baseline (`completed_baseline`) tamamlandı.
+Önerilen sonraki adım: jersey/team kimlik sinyalleri veya bir sonraki ana
+proje aşaması (ayrı onay):
 
     Video okuma
     → İnsan/oyuncu tespiti (tamamlandı)
     → ByteTrack geçici takip (tamamlandı; fragmented)
     → ReID altyapı hazırlığı (4A tamamlandı)
-    → Track-level ReID / linking (4B)
+    → Track-level ReID / linking baseline (4B tamamlandı)
+    → Jersey/team sinyalleri veya sonraki ana aşama (ayrı onay)
     → İşaretlenmiş video

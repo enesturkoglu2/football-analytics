@@ -40,8 +40,19 @@ Terminalde aşağıdaki komutlar çalıştırılır:
 - [x] Oyuncu detection
 - [x] Oyuncu tracking
 - [x] Aşama 4A ReID altyapı hazırlığı (izole sn-reid-cpu + genel ReID smoke)
-- [ ] Aşama 4B track-level ReID / linking
+- [x] Aşama 4B track-level ReID baseline (manual linking)
 - [ ] Takım sınıflandırması
 - [ ] Kalıcı oyuncu re-identification ürün hattı
 - [ ] Kamera kalibrasyonu
 - [ ] Oyuncu metrikleri
+
+## Aşama 4B (baseline)
+
+Track-level ReID baseline tamamlandı (`completed_baseline`).
+
+- `sample.mp4` full run: 276 raw track → 272 global candidate
+- Yalnız 4 manuel onaylı component (otomatik linking kapalı;
+  `similarity_threshold=null`)
+- Model: Market1501 genel person ReID (`osnet_x1_0`); SoccerNet-trained değil
+- Detaylı kapanış raporu:
+  [docs/setup/reid-stage4b-completion.md](docs/setup/reid-stage4b-completion.md)
