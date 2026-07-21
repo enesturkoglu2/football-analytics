@@ -3,15 +3,24 @@
 - **Date:** 2026-07-21
 - **Original gate:** Stage 5A1 — policy and schema planning
 - **Stage 5A status:** `visually_validated_measurement_baseline` (completed)
-- **Next technical gate:** Stage 5B — coarse team/kit descriptor
+- **Stage 5B status:**
+  `visually_validated_measurement_baseline_with_track_impurity_findings`
+  (completed measurement + visual validation)
+- **Next technical gate:** Stage 5B3 — raw-track purity and within-track
+  kit-change audit
 - **Focused target-player gate:** Stage 5D
 - **Pitch-position / GameState:** Stage 6 (separate from Stage 5)
 - **Identity-signals policy:** `configs/reid/identity_signals_stage5.yaml`
 - **Crop-quality policy:** `configs/reid/crop_quality_policy_stage5a.yaml`
+- **Kit measurement config:** `configs/reid/kit_descriptor_stage5b.yaml`
+- **Kit visual-validation policy:**
+  `configs/reid/kit_visual_validation_policy_stage5b.yaml`
 - **Quality visual validation:** `docs/setup/stage5a-quality-visual-validation.md`
+- **Kit visual validation:** [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)
 - **Focused-player / pitch roadmap:** [focused-player-and-pitch-position-roadmap.md](focused-player-and-pitch-position-roadmap.md)
 - **Stage 4B baseline:** `completed_baseline` (commit `76ede91`)
 - **Quality measurement commit:** `d6122d0`
+- **Kit measurement commit:** `777cc43`
 
 Stage 5A1 originally froze design/policy only. Stage 5A2/5A3 later
 implemented measurement and visual validation without selecting a
@@ -22,6 +31,12 @@ product direction and Stage 6 pitch-position / GameState adapter path.
 Product rules are **not** hard-coded to `sample.mp4`; that clip remains
 development / reference only. Multi-match generalization is not yet
 validated.
+
+Stage 5B1/5B2 later implemented torso/kit measurement and visual
+validation. Absolute color families remain audit-only. Within-track kit
+change is impurity-risk evidence; raw tracks are **not** atomic identity
+guarantees. No team assignment, clustering, auto-split, or global-ID
+rewrite was enabled.
 
 ## 1. Goal
 
@@ -176,9 +191,10 @@ Rules:
 | **5A1** | identity-signal policy and schema planning | completed |
 | **5A2** | crop-quality and contamination baseline — code + mock tests | completed |
 | **5A3** | real full run + visual validation on existing `sample.mp4` crops | completed |
-| **5B0** | focused-player + pitch-position roadmap (docs only) | this gate |
-| **5B1** | coarse team/kit descriptor — code + mock tests | next technical |
-| **5B2** | `sample.mp4` kit descriptor run and visual validation (dev/reference only) | pending |
+| **5B0** | focused-player + pitch-position roadmap (docs only) | completed |
+| **5B1** | coarse team/kit descriptor — code + mock tests | completed |
+| **5B2** | `sample.mp4` kit descriptor run and visual validation (dev/reference only) | completed |
+| **5B3** | raw-track purity and within-track kit-change audit | next technical |
 | **5C1** | jersey-number visibility audit — **no OCR model yet** | pending |
 | **5C2** | jersey-number extraction baseline selection — OCR/model decision needs separate approval | pending |
 | **5D** | focused target-player enrollment and gallery design (`target_A` / `target_B` / `non_target` / `unknown`) | pending |
@@ -195,10 +211,13 @@ Hair, shoe, and controlled-marker features:
 - **Not required** for core Stage 5 / Stage 6 success
 
 Frozen product-stage summary (see also
-[focused-player-and-pitch-position-roadmap.md](focused-player-and-pitch-position-roadmap.md)):
+[focused-player-and-pitch-position-roadmap.md](focused-player-and-pitch-position-roadmap.md)
+and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
 
 - **5A** crop quality — completed
-- **5B** coarse team/kit — next technical gate
+- **5B** coarse team/kit measurement + visual validation — completed
+- **5B3** raw-track purity / kit-change audit — next technical gate
+  (safety gate **before** Stage 5C)
 - **5C** jersey-number visibility audit
 - **5D** focused target-player enrollment / gallery
 - **5E** pair-level fusion + manual-review ranking
@@ -217,18 +236,46 @@ Frozen product-stage summary (see also
 - Global Laplacian threshold is **prohibited**; size-stratified
   audit/ranking is allowed
 - Frame-edge contact is **audit only** (not body-completeness proof)
-- Next technical implementation gate: **Stage 5B1 coarse team/kit
-  descriptor**
 
-### Stage 5B1 guardrails (preview)
+### Stage 5B completion notes
 
-When Stage 5B1 is approved separately:
+- Stage 5B1 measurement implementation: **completed**
+- Stage 5B2 real run and visual validation: **completed**
+- Stage 5B status:
+  **`visually_validated_measurement_baseline_with_track_impurity_findings`**
+- No team assignment / forced clustering / kit similarity threshold
+- Absolute color-family labels remain **audit only** (not team labels)
+- `raw_track_id` is **not** an atomic player-identity guarantee
+- Within-track kit change is impurity-risk evidence; agreement == 1 is
+  **not** purity proof
+- No automatic split, track deletion, or global-ID rewrite
+- Accepted Stage 4B component `[231, 635]` requires future purity review;
+  not auto-reversed
+- `sample.mp4` remains development / reference only
+- Next technical gate: **Stage 5B3 raw-track purity and kit-change audit**
+
+### Stage 5B1 guardrails (retained)
 
 - Use a torso-oriented descriptor
 - Preserve off-pitch / outlier / unknown handling
 - No forced two-team assignment
 - Kit similarity is **not** identity proof
 - Must not produce any automatic link or hard reject
+
+### Stage 5B3 guardrails (preview)
+
+When Stage 5B3 is approved separately:
+
+- Frame-ordered within-track continuous kit-change audit
+- Change-point candidates + contamination/quality context
+- Manual split-review shortlist only
+- Automatic split = **false**
+- Automatic track deletion = **false**
+- Global ID rewrite = **false**
+- Team assignment = **false**
+- Threshold = **null**
+- Manual review required
+- Stage 5B3 is a **safety gate before Stage 5C** jersey-number visibility
 
 ### Stage 5D / Stage 6 roadmap notes (preview)
 
@@ -338,6 +385,10 @@ Stage 5 completion does **not** require:
 - Enabling automatic linking or automatic identity fusion
 - Enabling automatic target assignment or automatic gallery expansion
 - Forced two-team or forced target-player assignment
+- Automatic team assignment or forced two-team clustering from kit
+  descriptors
+- Dominant-family → team mapping or sample-specific color mapping
+- Automatic raw-track split / deletion or global-ID rewrite
 - Claiming MOTA / HOTA / IDF1 / ReID mAP / accuracy %
 - Deleting or rewriting raw crops / raw track IDs
 - Hard-coding product rules to `sample.mp4` IDs / counts / kit colors
@@ -363,8 +414,11 @@ audited linking inputs. Until fusion is explicitly enabled and approved:
 - `docs/setup/reid-stage4b-linking-policy.md`
 - `docs/setup/reid-stage4b-schema-decisions.md`
 - `docs/setup/stage5a-quality-visual-validation.md`
+- [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)
 - [focused-player-and-pitch-position-roadmap.md](focused-player-and-pitch-position-roadmap.md)
 - `configs/reid/linking_policy_stage4b.yaml`
 - `configs/reid/crop_selection_stage4b.yaml`
 - `configs/reid/identity_signals_stage5.yaml`
 - `configs/reid/crop_quality_policy_stage5a.yaml`
+- `configs/reid/kit_descriptor_stage5b.yaml`
+- `configs/reid/kit_visual_validation_policy_stage5b.yaml`

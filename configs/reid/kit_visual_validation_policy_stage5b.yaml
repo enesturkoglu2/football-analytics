@@ -1,0 +1,73 @@
+# Stage 5B kit visual-validation usage policy — freeze (5B2C)
+# Source review: docs/setup/stage5b-kit-visual-validation.md
+#
+# Freezes measurement-baseline usage after visual review.
+# Does not enable team assignment, clustering, thresholds, splits,
+# or global-ID rewrite.
+
+schema_version: reid_kit_visual_validation_policy_v1
+source_review: docs/setup/stage5b-kit-visual-validation.md
+
+stage_status: visually_validated_measurement_baseline_with_track_impurity_findings
+
+automatic_team_assignment_enabled: false
+forced_two_team_clustering_enabled: false
+kit_similarity_threshold: null
+automatic_link_enabled: false
+automatic_reject_enabled: false
+
+torso_roi:
+  current_region: normalized_center_torso
+  measurement_baseline_retained: true
+  segmentation_proof: false
+  pose_aware: false
+  body_completeness_aware: false
+  region_validity_auto_label_enabled: false
+
+absolute_color_family:
+  usage: audit_only
+  dominant_family_is_team_label: false
+  sample_specific_mapping_allowed: false
+  green_means_pitch_background: false
+  white_gray_yellow_are_team_labels: false
+  camera_color_normalization_implemented: false
+
+continuous_descriptor:
+  future_usage:
+    - manual_review_ranking
+    - within_track_change_audit
+    - camera_segment_relative_comparison
+  automatic_threshold_enabled: false
+
+track_purity:
+  raw_track_is_atomic_identity_guarantee: false
+  within_track_kit_change_is_impurity_risk_evidence: true
+  no_detected_change_is_purity_proof: false
+  automatic_split_enabled: false
+  automatic_delete_enabled: false
+  manual_review_required: true
+
+region_specific_contamination:
+  crop_level_equals_torso_level: false
+  torso_specific_measurement_implemented: false
+  downstream_task_specific_quality_required: true
+
+existing_component_audit:
+  component:
+    - 231
+    - 635
+  global_candidate_id: 231
+  automatic_reversal_applied: false
+  requires_future_track_purity_review: true
+  proven_player_identity: false
+
+next_gate:
+  stage: Stage 5B3
+  name: raw_track_purity_and_kit_change_audit
+  automatic_split_enabled: false
+  threshold: null
+
+evaluation:
+  manual_visual_review_is_ground_truth: false
+  team_accuracy_claim_allowed: false
+  track_purity_accuracy_claim_allowed: false
