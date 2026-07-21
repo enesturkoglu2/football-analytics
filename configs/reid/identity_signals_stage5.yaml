@@ -1,0 +1,75 @@
+# Stage 5 identity-signals policy — planning freeze (5A1)
+# Source plan: docs/setup/stage5-identity-signals-plan.md
+#
+# This file freezes Stage 5 auxiliary-signal policy defaults only.
+# It does not enable extraction, fusion, OCR, team models, or linking.
+
+schema_version: reid_identity_signals_policy_v1
+source_plan: docs/setup/stage5-identity-signals-plan.md
+
+stage_status: planning
+
+automatic_identity_fusion_enabled: false
+automatic_linking_enabled: false
+identity_score_threshold: null
+
+# Pipeline-oriented enablement order. Evidence priority narrative lives in
+# docs/setup/stage5-identity-signals-plan.md section 2.
+signal_priorities:
+  - crop_quality
+  - team_kit
+  - jersey_number
+  - temporal_spatial
+  - weak_appearance
+
+crop_quality:
+  enabled: true
+  contamination_detection_enabled: false
+  minimum_quality_threshold: null
+  exclude_low_quality_from_embedding_aggregation: false
+  preserve_all_raw_crops: true
+
+team_kit:
+  enabled: false
+  usage: audit_and_ranking
+  hard_reject_enabled: false
+  same_kit_is_identity_proof: false
+  clear_kit_mismatch_is_negative_evidence: true
+
+jersey_number:
+  enabled: false
+  visibility_audit_required: true
+  ocr_model_selected: false
+  same_number_is_identity_proof: false
+  clear_different_number_is_negative_evidence: true
+  low_confidence_result_usage: unknown
+  automatic_link_from_number: false
+
+temporal_spatial:
+  exact_frame_conflict_hard_reject: true
+  spatial_hard_reject_enabled: false
+  usage: audit_and_ranking
+
+weak_appearance:
+  enabled: false
+  signals:
+    - hair
+    - shoe_color
+    - socks
+    - sleeve_length
+    - undershirt_color
+    - body_silhouette
+  usage: optional_support_only
+  hard_reject_enabled: false
+  automatic_link_enabled: false
+
+fusion:
+  enabled: false
+  manual_acceptance_required: true
+  missing_signal_behavior: unknown
+  uncontrolled_transitive_chaining_allowed: false
+
+evaluation:
+  ground_truth_available: false
+  accuracy_claim_allowed: false
+  golden_clip_required_before_metric_reporting: true
