@@ -1,0 +1,80 @@
+schema_version: reid_jersey_visibility_config_v1
+stage_status: implementation_measurement_baseline
+
+input:
+  entity_id: segment_id
+  use_existing_selected_crops_only: true
+  allow_video_input: false
+  allow_new_crop_extraction: false
+  include_recomputed_manual_segment_crops: true
+  include_reused_baseline_crop_provenance: true
+  include_retired_mixed_parent_entities: false
+  ambiguous_observations_allowed: false
+  unassigned_observations_allowed: false
+
+number_search_roi:
+  # Upper torso search region only; it does not imply back-facing pose or
+  # number visibility.
+  x_min_normalized: 0.15
+  x_max_normalized: 0.85
+  y_min_normalized: 0.10
+  y_max_normalized: 0.65
+  coordinate_rounding: floor_min_ceil_max_then_clamp
+
+measurements:
+  crop_dimensions: true
+  roi_dimensions: true
+  grayscale_mean: true
+  grayscale_std: true
+  laplacian_variance: true
+  tenengrad_mean: true
+  edge_density: true
+  entropy: true
+  local_contrast: true
+  roi_other_person_union_coverage: true
+  roi_other_person_center_inside_count: true
+  full_crop_other_person_union_coverage: true
+  edge_density_definition:
+    method: canny_nonzero_fraction
+    low_threshold: 100
+    high_threshold: 200
+  local_contrast_definition:
+    method: mean_absolute_difference_from_gaussian_3x3
+
+ranking:
+  independent_metrics_only: true
+  composite_score_enabled: false
+  automatic_visibility_threshold: null
+  automatic_readability_threshold: null
+  sharpness_ranking_size_stratified: true
+  roi_height_strata_pixels:
+    - 0
+    - 24
+    - 40
+    - 64
+    - 96
+    - 1000000
+
+recognition:
+  ocr_enabled: false
+  recognizer_enabled: false
+  checkpoint_required: false
+  jersey_number_candidate_enabled: false
+  automatic_jersey_assignment_enabled: false
+
+manual_review:
+  number_visible: null
+  number_readable: null
+  back_facing: null
+  digit_count: null
+  jersey_number: null
+  notes: null
+
+safety:
+  source_crops_immutable: true
+  segment_view_immutable: true
+  regression_artifacts_immutable: true
+  identity_ground_truth_available: false
+  accuracy_claim_allowed: false
+  team_assignment_enabled: false
+  global_id_rewrite_enabled: false
