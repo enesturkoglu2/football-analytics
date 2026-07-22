@@ -9,8 +9,9 @@
 - **Stage 5B3 status:**
   `completed_segmented_reid_regression_baseline`
 - **Stage 5C-A status:** `completed_manual_review_pilot_baseline`
-- **Next technical gate:** Stage 5C-B — recognizer/checkpoint
-  capability audit
+- **Stage 5C-B status:** `completed_environment_and_assets_not_loaded`
+- **Next technical gate:** Stage 5C-C — offline CPU crop smoke
+  (`next_gate_offline_cpu_crop_smoke`)
 - **Focused target-player gate:** Stage 5D
 - **Pitch-position / GameState:** Stage 6 (separate from Stage 5)
 - **Identity-signals policy:** `configs/reid/identity_signals_stage5.yaml`
@@ -225,9 +226,9 @@ Rules:
 | **5B3G-A** | segmented regression implementation | completed |
 | **5B3G-A1** | exact-conflict regression compatibility patch | completed |
 | **5B3G-B** | real segmented OSNet regression | completed |
-| **5C-A** | jersey-number visibility/readability measurement baseline — **no OCR** | next |
-| **5C-B** | SoccerNet sn-jersey / sn-gamestate jersey capability audit | pending |
-| **5C-C** | isolated jersey recognizer smoke test | pending |
+| **5C-A** | jersey-number visibility/readability measurement baseline — **no OCR** | completed |
+| **5C-B** | jersey recognizer capability audit, isolated environment, and DBNet/SAR asset acquisition | completed (assets not loaded) |
+| **5C-C** | isolated jersey recognizer smoke test (offline CPU crop smoke) | next |
 | **5C-D** | tracklet-level multi-frame jersey aggregation | pending |
 | **5D** | focused target-player enrollment and gallery design (`target_A` / `target_B` / `non_target` / `unknown`) | pending |
 | **5E** | pair-level auxiliary evidence fusion and manual-review ranking | pending |
@@ -266,9 +267,13 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
   150 embedded segment entities, and 141 deliberate no-baseline
   entities; no automatic identity action)
 - **5C-A** jersey-number visibility/readability measurement baseline —
-  next (no OCR, recognizer, or jersey assignment)
-- **5C-B–5C-D** capability audit, isolated recognizer smoke, and
-  tracklet-level multi-frame aggregation
+  completed (no OCR, recognizer, or jersey assignment;
+  `completed_manual_review_pilot_baseline`)
+- **5C-B** recognizer capability audit + isolated environment +
+  DBNet/SAR asset acquisition — completed
+  (`completed_environment_and_assets_not_loaded`)
+- **5C-C–5C-D** offline CPU crop smoke and tracklet-level multi-frame
+  aggregation
 - **5D** focused target-player enrollment / gallery
 - **5E** pair-level fusion + manual-review ranking
 - **6A–6D** pitch-position / GameState adapter path and multi-match eval
@@ -348,8 +353,9 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
 - No threshold, accuracy claim, automatic merge/link/reject/component,
   global-ID rewrite, or team assignment
 - Stage 5C-A status: **`completed_manual_review_pilot_baseline`**
-- Next technical gate: **Stage 5C-B recognizer/checkpoint capability
-  audit**
+- Stage 5C-B status:
+  **`completed_environment_and_assets_not_loaded`**
+- Next technical gate: **Stage 5C-C offline CPU crop smoke**
 
 ### Stage 5C-A handoff (completed)
 
@@ -371,14 +377,49 @@ Stage 5C-A completed a measurement-only visibility/readability pilot:
 
 The retained downstream order is:
 
-- **Stage 5C-B (next):** SoccerNet sn-jersey / sn-gamestate
-  recognizer/checkpoint capability audit;
-- **Stage 5C-C:** isolated recognizer smoke test;
+- **Stage 5C-B (completed):** recognizer capability audit, isolated
+  environment setup, and controlled DBNet/SAR asset acquisition;
+- **Stage 5C-C (next):** isolated recognizer smoke test (offline CPU
+  crop smoke);
 - **Stage 5C-D:** tracklet-level multi-frame aggregation;
 - **Stage 5D:** target-player enrollment/gallery memory;
 - **Stage 5E:** evidence fusion and golden evaluation; and
 - **Stage 6:** GameState/calibration/pitch coordinates and spatial
   continuity.
+
+### Stage 5C-B completion notes
+
+Stage 5C-B completed through five sub-gates:
+
+| Sub-gate | Scope | Status |
+|---|---|---|
+| **B1** | local capability audit | completed |
+| **B2** | controlled clone + code audit (sn-jersey, sn-gamestate) | completed |
+| **B3** | environment and asset plan (official verification) | completed |
+| **B4** | isolated environment setup (`sn-jersey-mmocr-cpu`) | completed |
+| **B5** | controlled DBNet/SAR asset acquisition | completed |
+
+Frozen selections and facts:
+
+- **Selected primary candidate:** minimal isolated MMOCR CPU
+  (clean adapter; no sn-gamestate import at runtime)
+- **Detector:** DBNet (`dbnet_resnet18_fpnc_1200e_icdar2015`)
+- **Recognizer:** SAR
+  (`sar_resnet31_parallel-decoder_5e_st-sub_mj-sub_sa_real`)
+- **Fallback:** EasyOCR CPU — only if the primary path fails
+- **Dataset:** not required for initial smoke (SoccerNet jersey
+  dataset not downloaded)
+- **Asset status:** `acquired_not_loaded` — checkpoints/configs are
+  local under
+  `/home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr`
+  but no checkpoint was deserialized, no model was initialized, and no
+  OCR/inference was performed
+- Environment: `sn-jersey-mmocr-cpu` (Python 3.9.25, torch 1.13.1+cpu,
+  mmocr 1.0.1, mmcv 2.0.1 CPU wheel, mmdet 3.1.0, mmengine 0.10.7)
+- Checkpoint license/redistribution status is not verified; assets are
+  kept for local research smoke only and are not committed to Git
+- Asset details (paths, sizes, SHA-256, manifests):
+  `PROJECT_CONTEXT.md` section 10.2
 
 ### Stage 5B3 guardrails (retained)
 

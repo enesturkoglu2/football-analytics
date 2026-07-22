@@ -37,19 +37,20 @@ Nihai hedeflerden bazıları:
 Not: WSL yaklaşık 1 TB disk gösterse de gerçek fiziksel boş alan
 Windows C diskindeki yaklaşık 67 GB ile sınırlıdır.
 
-## 3. Python ortamı
+## 3. Python ortamları
 
-Conda ortamı:
+Üç izole conda environment kullanılmaktadır:
 
-    football-cv
+### 3.1 football-cv (ana geliştirme)
 
 Python yolu:
 
     /home/enesturkoglu2/miniconda3/envs/football-cv/bin/python
 
-Python sürümü:
-
-    3.10.20
+- Python 3.10.20
+- torch 2.13.0+cpu
+- Ana video/detection/tracking/ReID geliştirme ortamı
+- Mevcut test suite (342 test) bu ortamda çalışır
 
 Ortam izolasyonu:
 
@@ -61,6 +62,32 @@ Ortam izolasyonu:
 Aktivasyon:
 
     conda activate football-cv
+
+### 3.2 sn-reid-cpu (OSNet/ReID)
+
+- Python 3.10.20, torch 2.13.0+cpu, torchvision 0.28.0+cpu
+- Yalnız OSNet embedding inference için kullanılır
+- General ReID checkpoint (`osnet_x1_0` / Market1501) bu ortamla
+  yüklenir; SoccerNet-trained değildir
+
+### 3.3 sn-jersey-mmocr-cpu (jersey OCR smoke; Stage 5C-B4)
+
+Path:
+
+    /home/enesturkoglu2/miniconda3/envs/sn-jersey-mmocr-cpu
+
+- Python 3.9.25
+- torch 1.13.1+cpu
+- torchvision 0.14.1+cpu
+- numpy 1.26.4
+- opencv-python 4.10.0.84
+- mmcv 2.0.1 (prebuilt CPU wheel)
+- mmengine 0.10.7
+- mmdet 3.1.0
+- mmocr 1.0.1
+- CUDA false
+- TrackLab / Hydra / EasyOCR / sn-gamestate package kurulu değildir
+- Environment boyutu yaklaşık 1.6 GB
 
 ## 4. Kurulu temel paketler
 
@@ -113,6 +140,14 @@ Ana dal:
 İlk commit:
 
     94daa9e Create project foundation and record environment
+
+Güncel durum (Stage 5C-B5 sonrası, dokümantasyon senkronizasyonu
+öncesi):
+
+- current HEAD: `995893c` — Document jersey review pilot results
+- `main == origin/main`
+- working tree başlangıçta clean
+- sistem CPU-only'dir
 
 ## 6. Proje klasörleri
 
@@ -291,18 +326,69 @@ Aşama 4B tamamlandı (`completed_baseline`; track-level ReID / manual linking):
   `configs/reid/crop_selection_stage4b.yaml`,
   `configs/reid/linking_policy_stage4b.yaml`
 
-## 8. Sıradaki aşama
+Aşama 5A tamamlandı (crop quality / contamination ölçüm baseline):
 
-Aşama 4B baseline kapandı. Önerilen sonraki iyileştirmeler (ayrı onay):
+- Ölçüm + görsel doğrulama; threshold seçilmedi, otomatik exclusion yok
+- Status: `visually_validated_measurement_baseline`
 
-- Jersey number recognition ve/veya team/kit classification
-- Crop contamination detection
-- Temporal/spatial motion consistency
-- Football-domain ReID fine-tuning
-- Labelled golden clips + resmi değerlendirme metrikleri
+Aşama 5B tamamlandı (kit ölçümü, purity audit, segmentation,
+segmented ReID regression):
 
-Takım sınıflandırması ve kalıcı oyuncu kimliği ürün hattı hâlâ ayrı
-aşamalardır. Ayrı onay olmadan yeni ürün kodu yazılmayacaktır.
+- Torso/kit descriptor ölçümü ve görsel doğrulama (takım ataması yok)
+- Track purity audit + manuel non-destructive segment view
+  (raw track'ler immutable; 13 split candidate, derived segment view)
+- Segmented OSNet regression: 13 retired mixed parent, 28 recomputed
+  manual segment, 122 reused embedding, 150 embedded segment entity
+- Status: `completed_segmented_reid_regression_baseline`
+
+Aşama 5C visibility/pilot tamamlandı (Stage 5C-A):
+
+- Jersey visibility / contamination / ROI ölçümü (OCR'sız)
+- Review panelleri ve 78-item manuel pilot (7 batch)
+- Pilot freeze: `outputs/reid/full_stage4b/jersey_pilot_results_stage5c`
+- Status: `completed_manual_review_pilot_baseline`
+- Rapor: `docs/setup/stage5c-jersey-pilot-results.md`
+
+Aşama 5C-B tamamlandı (jersey recognizer hazırlığı; model henüz
+yüklenmedi):
+
+- **B1/B2 capability audit:** sn-jersey ve sn-gamestate kontrollü clone
+  + salt-okuma kod auditi; MMOCR (DBNet + SAR) primary candidate,
+  EasyOCR fallback olarak seçildi
+- **B3 environment/asset planı:** resmî package/checkpoint/license
+  doğrulaması; PROFILE A minimal isolated MMOCR CPU planı onaylandı
+- **B4 environment setup:** `sn-jersey-mmocr-cpu` kuruldu (bkz. bölüm
+  3.3); import smoke geçti; model init yapılmadı
+- **B5 asset acquisition:** DBNet/SAR config + checkpoint kontrollü
+  indirildi ve doğrulandı (bkz. bölüm 10.2); checkpoint deserialize
+  edilmedi
+- Status: `completed_environment_and_assets_not_loaded`
+
+## 8. Aktif kapı ve sıradaki adımlar
+
+Güncel durum:
+
+- **Stage 5C-B5:** `completed_assets_acquired_not_loaded`
+- **Sıradaki kapı:** Stage 5C-C — offline CPU crop smoke
+
+Stage 5C-C tasarımı (henüz uygulanmadı):
+
+- Ağ kapalı; yalnız local DBNet/SAR config/checkpoint
+- CPU model init (ilk kez bu kapıda)
+- Deterministic 46 crop: 20 readable positive + 6 visible/unreadable +
+  10 number-not-visible + 5 uncertain + 5 invalid
+- Exact match + false positive + rejection ölçümleri
+- Identity/gallery/global-ID değişikliği yok
+
+Planlanan sıra:
+
+1. Documentation sync commit (bu kapı)
+2. Stage 5C-C smoke implementation/design gate
+3. Offline model init ve 46-crop testi
+4. Stage 5C-D segment-level OCR aggregation
+5. Stage 5D target gallery/enrollment
+6. Stage 5E evidence fusion
+7. Stage 6 spatial continuity / pitch position
 
 ## 9. Cursor için zorunlu kurallar
 
@@ -325,30 +411,142 @@ aşamalardır. Ayrı onay olmadan yeni ürün kodu yazılmayacaktır.
 
 ## 10. SoccerNet durumu
 
-Aşama 4A ile klonlanan / pinlenen dış repolar (ana repo dışında):
+### 10.1 Dış repolar (ana repo dışında; hepsi clean)
 
-1. SoccerNet Python SDK — `74461027ac2095ce2f8d4ee991eccb5dd5f42459`
-2. sn-reid — `621e2b0f2d2a7a3e207b8dd747542b6608bf72db`
+| Repo | Path | HEAD |
+|---|---|---|
+| SoccerNet SDK | `/home/enesturkoglu2/projects/soccernet/SoccerNet` | `74461027ac2095ce2f8d4ee991eccb5dd5f42459` |
+| sn-reid | `/home/enesturkoglu2/projects/soccernet/sn-reid` | `621e2b0f2d2a7a3e207b8dd747542b6608bf72db` |
+| sn-jersey | `/home/enesturkoglu2/projects/soccernet/sn-jersey` | `2f43b48c59eefe0bb5d948888db07f55f51208ad` |
+| sn-gamestate | `/home/enesturkoglu2/projects/soccernet/sn-gamestate` | `1c958345067218297d221e45e1a6405f975f83e0` |
+
+Jersey OCR yaklaşımı ile ilgili audit sonuçları (Stage 5C-B1/B2):
+
+- `sn-jersey` reposu yalnız challenge/dataset README'sidir; çalışan
+  recognizer kodu içermez.
+- Jersey OCR yaklaşımı `sn-gamestate` auditinden çıkarılmıştır
+  (MMOCR DBNet detector + SAR recognizer).
+- Runtime'da sn-gamestate import etmeyen **clean MMOCR adapter**
+  tercih edilmiştir; resmî MMOCR public API doğrudan kullanılacaktır.
+- GPL-3.0 lisanslı sn-gamestate kodu football-analytics içine
+  kopyalanmayacaktır.
 
 Henüz kurulmayan / ertelenen adaylar (aynı anda kurulmayacak):
 
-- sn-trackeval, sn-tracking, sn-calibration, sn-jersey, sn-gamestate,
-  sn-spotting, sn-teamspotting
+- sn-trackeval, sn-tracking, sn-calibration, sn-spotting,
+  sn-teamspotting
 
-Büyük SoccerNet datasetleri ve SoccerNet-trained ReID checkpoint
-indirilmedi. Checkpoint klasörü:
+Büyük SoccerNet datasetleri (jersey dataseti dahil) ve
+SoccerNet-trained ReID checkpoint indirilmedi. Checkpoint klasörü:
 `/home/enesturkoglu2/projects/soccernet/checkpoints/` (Git dışı).
+
+### 10.2 DBNet/SAR asset'leri (Stage 5C-B5; Git dışı)
+
+Asset root:
+
+    /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr
+
+Top-level yapı: `dbnet/`, `sar/`, `configs/`, `manifests/`.
+
+MMOCR source:
+
+- Repo: `https://github.com/open-mmlab/mmocr.git`
+- Tag: `v1.0.1`
+- Commit: `1dcd6fa6958de22bcb997319833f0ac19c180ec7`
+
+DBNet detector checkpoint:
+
+- Path: `dbnet/dbnet_resnet18_fpnc_1200e_icdar2015_20220825_221614-7c0e94f2.pth`
+- Boyut: 59 068 395 byte
+- SHA-256 (indirme sonrası bizim hesabımız; resmî tam checksum
+  yayımlanmamıştır):
+  `7c0e94f2f52e014fa423f489e059640e10f765f3c34f38b80454d7b850174cfb`
+
+SAR recognizer checkpoint:
+
+- Path: `sar/sar_resnet31_parallel-decoder_5e_st-sub_mj-sub_sa_real_20220915_171910-04eb4e75.pth`
+- Boyut: 231 195 256 byte
+- SHA-256 (indirme sonrası bizim hesabımız):
+  `04eb4e75467fc951e9b189a273216dd2428d30f7d913368155ab5c69bbeb843c`
+
+Toplam checkpoint boyutu: 290 263 651 byte.
+
+Config closure (AST ile çıkarıldı; config execute edilmedi):
+
+- 2 root config (DBNet + SAR)
+- 21 dosya, 16 810 byte
+- unresolved reference = 0
+- SAR dictionary (`dicts/english_digits_symbols.txt`) dahildir
+
+Manifestler:
+
+- `manifests/asset_manifest.json` — SHA-256:
+  `5b238ea7e83ed23a274329b2e811b3d26d319def8ba3b1a4434e46adfc4f62c2`
+- `manifests/config_closure.json` — SHA-256:
+  `fd29e4d262e80bce242274fe83ee19cc4e4ee0e6c021e60d9a67856b8f63d743`
+
+Safety durumu:
+
+- assets acquired (`status=assets_acquired_not_loaded`)
+- checkpoint loaded = false
+- model initialized = false
+- inference performed = false
+
+Lisans sınırı: framework Apache-2.0; checkpoint
+redistribution/commercial durumu doğrulanmamıştır. Asset'ler yalnız
+local research smoke içindir ve Git'e commit edilmez.
+
+### 10.3 Pilot referans durumu (Stage 5C-A freeze)
+
+- Canonical crop: 474
+- Pilot item: 78 (78/78 reviewed)
+- Valid crop: 65
+- Number visible = yes: 26
+- Readable = yes (jersey observation): 20
+- Non-pilot unreviewed: 396
+
+Sınırlar:
+
+- Pilot bir accuracy benchmark'ı **değildir**.
+- Single-reviewer (Furkan); independent double review yoktur.
+- Crop-level observation'lar identity ground truth değildir.
+
+Önemli purity/mixed-target bulguları:
+
+- `raw_231` split 9/17 (iki segment farklı forma numarası gösterir)
+- `raw_514` purity warning
+- `raw_16` / `raw_13` invalid off-pitch crop kaynağı
+- `raw_738` mixed target
 
 ## 11. Mevcut öncelik
 
-Aşama 4B track-level ReID baseline (`completed_baseline`) tamamlandı.
-Önerilen sonraki adım: jersey/team kimlik sinyalleri veya bir sonraki ana
-proje aşaması (ayrı onay):
+Stage 5C-B5 tamamlandı; sıradaki kapı **Stage 5C-C offline CPU crop
+smoke**:
 
     Video okuma
     → İnsan/oyuncu tespiti (tamamlandı)
     → ByteTrack geçici takip (tamamlandı; fragmented)
     → ReID altyapı hazırlığı (4A tamamlandı)
     → Track-level ReID / linking baseline (4B tamamlandı)
-    → Jersey/team sinyalleri veya sonraki ana aşama (ayrı onay)
-    → İşaretlenmiş video
+    → Crop quality / kit / purity / segmentation (5A-5B tamamlandı)
+    → Jersey visibility + 78-item manuel pilot (5C-A tamamlandı)
+    → MMOCR environment + DBNet/SAR asset (5C-B tamamlandı)
+    → Offline CPU jersey OCR smoke (5C-C — sıradaki, ayrı onay)
+    → Segment aggregation / gallery / fusion (5C-D, 5D, 5E)
+    → Spatial continuity (Stage 6)
+
+## 12. Jersey OCR güvenlik kısıtları (Stage 5C-C öncesi)
+
+- Checkpoint/model asset'leri Git'e commit edilmez.
+- MMOCR model alias'ı ile otomatik download yapılmaz; yalnız local
+  config ve local weight path kullanılacaktır.
+- Checkpoint lisans/redistribution belirsizliği korunur; asset'ler
+  yalnız local research smoke içindir.
+- SoccerNet jersey dataset indirilmedi; ilk smoke için gerekli
+  değildir.
+- Hiçbir jersey OCR sonucu doğrudan identity ground truth sayılmaz;
+  jersey OCR evidence'tır, identity değildir.
+- Stage 5A/5B artifact'leri yeniden üretilmeden reuse edilir.
+- Yeni videoda detection/tracking doğal olarak tekrar çalışacaktır.
+- Identity/gallery/team/global-ID işlemleri jersey smoke kapılarında
+  değiştirilmez.
