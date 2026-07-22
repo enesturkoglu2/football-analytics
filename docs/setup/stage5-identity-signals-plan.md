@@ -11,9 +11,12 @@
 - **Stage 5C-A status:** `completed_manual_review_pilot_baseline`
 - **Stage 5C-B status:** `completed_environment_and_assets_not_loaded`
 - **Stage 5C-C1 status:** `completed_offline_smoke_low_signal_baseline`
-- **Next technical gate:** Stage 5C-C2 controlled
-  recognizer/preprocessing ablation
-  (`next_gate_controlled_recognizer_preprocessing_ablation`)
+- **Stage 5C-C2 status:** `completed_no_exact_signal_in_tested_variants`
+- **Stage 5C-C2a status:** `review_package_generated_unreviewed`
+- **Stage 5C-C2b status:** `skipped_by_project_decision_not_required_for_c3a`
+- **Stage 5C-C3A status:** `completed_audit_no_install`
+- **Next technical gate:** Stage 5C-C3B isolated PARSeq CPU environment
+  (`next_gate_isolated_parseq_environment`)
 - **Focused target-player gate:** Stage 5D
 - **Pitch-position / GameState:** Stage 6 (separate from Stage 5)
 - **Identity-signals policy:** `configs/reid/identity_signals_stage5.yaml`
@@ -231,7 +234,13 @@ Rules:
 | **5C-A** | jersey-number visibility/readability measurement baseline — **no OCR** | completed |
 | **5C-B** | jersey recognizer capability audit, isolated environment, and DBNet/SAR asset acquisition | completed (assets not loaded) |
 | **5C-C1** | offline CPU DBNet+SAR baseline smoke on 46 crops | completed (`completed_offline_smoke_low_signal_baseline`) |
-| **5C-C2** | controlled recognizer/preprocessing ablation | next |
+| **5C-C2** | controlled recognizer/preprocessing ablation | completed (`completed_no_exact_signal_in_tested_variants`; DBNet/SAR family closed) |
+| **5C-C2a** | detector region quality review package | completed (`review_package_generated_unreviewed`) |
+| **5C-C2b** | Furkan detector-region manual review | skipped (`skipped_by_project_decision_not_required_for_c3a`) |
+| **5C-C3A** | SoccerNet fine-tuned PARSeq capability audit | completed (`completed_audit_no_install`) |
+| **5C-C3B** | isolated PARSeq CPU environment | next (`next_gate_isolated_parseq_environment`) |
+| **5C-C3C** | controlled PARSeq checkpoint acquisition | future |
+| **5C-C3D** | offline PARSeq recognizer-only smoke | future |
 | **5C-D** | tracklet-level multi-frame jersey aggregation | pending |
 | **5D** | focused target-player enrollment and gallery design (`target_A` / `target_B` / `non_target` / `unknown`) | pending |
 | **5E** | pair-level auxiliary evidence fusion and manual-review ranking | pending |
@@ -277,7 +286,13 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
   (`completed_environment_and_assets_not_loaded`)
 - **5C-C1** offline CPU DBNet+SAR baseline smoke — completed
   (`completed_offline_smoke_low_signal_baseline`)
-- **5C-C2** controlled recognizer/preprocessing ablation — next
+- **5C-C2** controlled recognizer/preprocessing ablation — completed
+  (`completed_no_exact_signal_in_tested_variants`; DBNet/SAR family
+  closed)
+- **5C-C2a** detector region review package — generated_unreviewed
+- **5C-C2b** manual region review — skipped by project decision
+- **5C-C3A** PARSeq capability audit — completed (no install)
+- **5C-C3B** isolated PARSeq CPU environment — next
 - **5C-D** tracklet-level multi-frame aggregation — pending
 - **5D** focused target-player enrollment / gallery
 - **5E** pair-level fusion + manual-review ranking
@@ -362,8 +377,10 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
   **`completed_environment_and_assets_not_loaded`**
 - Stage 5C-C1 status:
   **`completed_offline_smoke_low_signal_baseline`**
-- Next technical gate: **Stage 5C-C2 controlled
-  recognizer/preprocessing ablation**
+- Stage 5C-C2 status:
+  **`completed_no_exact_signal_in_tested_variants`**
+- Stage 5C-C3A status: **`completed_audit_no_install`**
+- Next technical gate: **Stage 5C-C3B isolated PARSeq CPU environment**
 
 ### Stage 5C-A handoff (completed)
 
@@ -391,9 +408,15 @@ The retained downstream order is:
   (`completed_offline_smoke_low_signal_baseline`); pipeline
   successful, detector low-signal on current ROI; not a general
   accuracy benchmark;
-- **Stage 5C-C2 (next):** controlled recognizer/preprocessing
-  ablation (`next_gate_controlled_recognizer_preprocessing_ablation`);
-  not started in this gate;
+- **Stage 5C-C2 (completed):** controlled ablation
+  (`completed_no_exact_signal_in_tested_variants`); DBNet/SAR general
+  scene-text family closed; jersey OCR not abandoned;
+- **Stage 5C-C2a / C2b:** region review package generated_unreviewed;
+  manual review skipped by project decision;
+- **Stage 5C-C3A (completed):** PARSeq capability audit (no install);
+- **Stage 5C-C3B (next):** isolated PARSeq CPU environment;
+- **Stage 5C-C3C / C3D (future):** controlled checkpoint acquisition
+  and offline recognizer-only smoke;
 - **Stage 5C-D:** tracklet-level multi-frame aggregation;
 - **Stage 5D:** target-player enrollment/gallery memory;
 - **Stage 5E:** evidence fusion and golden evaluation; and
@@ -453,8 +476,40 @@ Stage 5C-C1 completed an offline CPU DBNet+SAR baseline smoke:
   `outputs/reid/full_stage4b/jersey_mmocr_smoke_baseline_freeze_stage5c_c1`
 - detailed results:
   `docs/setup/stage5c-jersey-mmocr-baseline-results.md`
-- next gate: **Stage 5C-C2** controlled recognizer/preprocessing
-  ablation (not started)
+
+### Stage 5C-C2 completion notes
+
+Stage 5C-C2 completed a controlled recognizer/preprocessing ablation:
+
+- status: **`completed_no_exact_signal_in_tested_variants`**
+- pipeline successful (184/184; `inference_error=0`;
+  `pass_loopback_only`)
+- four variants; exact match 0/20 on all; DBNet 4× region items 1→6
+  (52 regions); direct SAR wrong low-confidence emissions only
+- evidence: `UPSCALE_IMPROVES_DETECTION`,
+  `NO_EXACT_SIGNAL_IN_TESTED_VARIANTS`
+- model-family status: general scene-text DBNet/SAR
+  **closed_after_controlled_negative_result**
+- jersey OCR product direction **not** cancelled
+- C2a: `review_package_generated_unreviewed` (52 regions)
+- C2b: `skipped_by_project_decision_not_required_for_c3a`
+- freeze:
+  `outputs/reid/full_stage4b/jersey_mmocr_ablation_freeze_stage5c_c2`
+- detailed results:
+  `docs/setup/stage5c-jersey-mmocr-ablation-results.md`
+
+### Stage 5C-C3A completion notes
+
+- status: **`completed_audit_no_install`**
+- external repo HEAD `007d54e5530a66616ed5081ca35e0028b36aadb5`
+- SoccerNet fine-tuned PARSeq checkpoint publicly accessible by
+  metadata (~364M); not downloaded; checksum unavailable
+- CPU: `cpu_supported_with_small_adapter`
+- dataset not required for initial local smoke
+- stop/go: **`GO_STAGE5C_C3B_ENV_PLAN`**
+- audit doc: `docs/setup/stage5c-parseq-capability-audit.md`
+- next gate: **Stage 5C-C3B** isolated PARSeq CPU environment
+  (PARSeq not installed or run in this gate)
 
 ### Stage 5B3 guardrails (retained)
 

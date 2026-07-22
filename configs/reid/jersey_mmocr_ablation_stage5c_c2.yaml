@@ -1,0 +1,95 @@
+# Stage 5C-C2 controlled recognizer/preprocessing ablation configuration.
+# Same 46 crops, same DBNet/SAR checkpoints as the frozen C1 baseline.
+# Fixed four-variant matrix; INTER_CUBIC integer upscaling only; no other
+# preprocessing, no threshold, no image export, no source overwrite.
+schema_version: reid_jersey_mmocr_ablation_config_v1
+stage: 5C-C2
+device: cpu
+max_items: 46
+expected_prediction_count: 184
+offline_required: true
+color_convention: bgr
+roi_source: stage5a_number_search_roi
+
+baseline_freeze:
+  path: outputs/reid/full_stage4b/jersey_mmocr_smoke_baseline_freeze_stage5c_c1
+  inference_manifest_sha256: f6d8ffa9c8b1c00d8861a73337288e4de9ebf0610f947f3b1d920f94dc2abf39
+  evaluation_reference_sha256: fd1684606e7ced670f8fb8938fbadd8a20afb686d14d2e6b2bee3d746d512022
+  freeze_summary_sha256: f6874f4ef64fab1d8ca929d17159e3e21e8ea4006f5c05c2b0de88285c86cfc3
+  freeze_manifest_sha256: 852ea56d13bfca7647117de10e7c3b50d550fa176acf2c4ffe57326cf4b13471
+
+asset_root: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr
+asset_manifest_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr/manifests/asset_manifest.json
+asset_manifest_sha256: 5b238ea7e83ed23a274329b2e811b3d26d319def8ba3b1a4434e46adfc4f62c2
+config_closure_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr/manifests/config_closure.json
+config_closure_sha256: fd29e4d262e80bce242274fe83ee19cc4e4ee0e6c021e60d9a67856b8f63d743
+
+detector:
+  model_id: dbnet_resnet18_fpnc_1200e_icdar2015
+  config_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr/configs/mmocr-v1.0.1/configs/textdet/dbnet/dbnet_resnet18_fpnc_1200e_icdar2015.py
+  config_sha256: c5adca881e5a38212bb1335ef447f35df171863714e981bdd7551dad15edf874
+  checkpoint_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr/dbnet/dbnet_resnet18_fpnc_1200e_icdar2015_20220825_221614-7c0e94f2.pth
+  checkpoint_sha256: 7c0e94f2f52e014fa423f489e059640e10f765f3c34f38b80454d7b850174cfb
+  checkpoint_byte_size: 59068395
+
+recognizer:
+  model_id: sar_resnet31_parallel-decoder_5e_st-sub_mj-sub_sa_real
+  config_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr/configs/mmocr-v1.0.1/configs/textrecog/sar/sar_resnet31_parallel-decoder_5e_st-sub_mj-sub_sa_real.py
+  config_sha256: 3df00bd316cfc5f1507d4dff2dc2306087423bbccb343d749f21797470669188
+  checkpoint_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr/sar/sar_resnet31_parallel-decoder_5e_st-sub_mj-sub_sa_real_20220915_171910-04eb4e75.pth
+  checkpoint_sha256: 04eb4e75467fc951e9b189a273216dd2428d30f7d913368155ab5c69bbeb843c
+  checkpoint_byte_size: 231195256
+
+digit_policy:
+  pattern: "^[0-9]{1,2}$"
+  max_digits: 2
+  letter_to_digit_conversion: false
+  confidence_threshold: null
+
+# Fixed experiment matrix; order is part of the contract.
+variants:
+  - variant_id: direct_sar_roi_1x
+    detector_used: false
+    scale_factor: 1
+  - variant_id: direct_sar_roi_2x_cubic
+    detector_used: false
+    scale_factor: 2
+  - variant_id: direct_sar_roi_4x_cubic
+    detector_used: false
+    scale_factor: 4
+  - variant_id: dbnet_sar_roi_4x_cubic
+    detector_used: true
+    scale_factor: 4
+
+interpolation: INTER_CUBIC
+manual_labels_blind: true
+image_export: false
+source_overwrite: false
+
+selection:
+  expected_counts:
+    POS_readable: 20
+    A_not_visible: 10
+    B_visible_unreadable: 2
+    C_uncertain_signal: 7
+    D_uncertain_crop: 2
+    E_invalid: 5
+
+# C1 frozen baseline reference metrics for the comparison summary.
+c1_baseline_metrics:
+  variant_id: c1_dbnet_sar_roi_1x_baseline
+  positive_exact_match_count: 0
+  positive_number_emission_count: 0
+  positive_wrong_number_count: 0
+  positive_no_prediction_count: 20
+  negative_number_emission_count: 0
+  detector_no_region_item_count: 45
+  detector_region_item_count: 1
+  recognizer_no_digit_count: 1
+  inference_error_count: 0
+  median_runtime_ms: 656.2199629843235
+  preprocessing_variant: number_search_roi_v1
+  network_policy: pass_loopback_only
+
+output:
+  final_dir: outputs/reid/full_stage4b/jersey_mmocr_ablation_stage5c_c2

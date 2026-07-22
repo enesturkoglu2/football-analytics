@@ -1048,3 +1048,699 @@ def build_runtime_summary(
         "warnings": dict(warning_summary),
         "input_color_convention": "bgr",
     }
+
+
+# ---------------------------------------------------------------------------
+# Stage 5C-C2 controlled recognizer/preprocessing ablation
+# ---------------------------------------------------------------------------
+# The C1 baseline contract above is unchanged. The additions below implement
+# a fixed four-variant experiment matrix (direct SAR at 1x/2x/4x and
+# DBNet+SAR at 4x) with deterministic INTER_CUBIC upscaling only. No other
+# preprocessing (sharpening, contrast, CLAHE, denoise, rotation, padding,
+# channel conversion) is available through these helpers.
+
+ABLATION_PREDICTION_SCHEMA_VERSION = "reid_jersey_mmocr_ablation_prediction_v1"
+ABLATION_ITEM_EVALUATION_SCHEMA_VERSION = "reid_jersey_mmocr_ablation_item_evaluation_v1"
+ABLATION_VARIANT_SUMMARY_SCHEMA_VERSION = "reid_jersey_mmocr_ablation_variant_summary_v1"
+ABLATION_COMPARISON_SCHEMA_VERSION = "reid_jersey_mmocr_ablation_comparison_summary_v1"
+ABLATION_RUNTIME_SCHEMA_VERSION = "reid_jersey_mmocr_ablation_runtime_summary_v1"
+ABLATION_RUN_MANIFEST_SCHEMA_VERSION = "reid_jersey_mmocr_ablation_run_manifest_v1"
+
+ALLOWED_SCALE_FACTORS = (1, 2, 4)
+ABLATION_INTERPOLATION = "INTER_CUBIC"
+
+# Fixed experiment matrix. Order is part of the contract and must not change.
+ABLATION_VARIANTS: tuple[dict[str, Any], ...] = (
+    {"variant_id": "direct_sar_roi_1x", "detector_used": False, "scale_factor": 1},
+    {"variant_id": "direct_sar_roi_2x_cubic", "detector_used": False, "scale_factor": 2},
+    {"variant_id": "direct_sar_roi_4x_cubic", "detector_used": False, "scale_factor": 4},
+    {"variant_id": "dbnet_sar_roi_4x_cubic", "detector_used": True, "scale_factor": 4},
+)
+ABLATION_VARIANT_IDS = tuple(variant["variant_id"] for variant in ABLATION_VARIANTS)
+
+# Evidence labels (descriptive only; no deployment decision).
+LABEL_DIRECT_EXACT = "DIRECT_RECOGNIZER_EXACT_SIGNAL_PRESENT"
+LABEL_UPSCALE_RECOGNITION = "UPSCALE_IMPROVES_DIRECT_RECOGNITION"
+LABEL_UPSCALE_DETECTION = "UPSCALE_IMPROVES_DETECTION"
+LABEL_NO_EXACT = "NO_EXACT_SIGNAL_IN_TESTED_VARIANTS"
+LABEL_NEGATIVE_RISK = "NEGATIVE_EMISSION_RISK_PRESENT"
+
+
+def resize_roi_deterministic(roi_image: Any, scale_factor: int) -> tuple[Any, float]:
+    """Deterministically upscale a BGR ROI by an exact integer factor.
+
+    Only ``cv2.INTER_CUBIC`` is used; aspect ratio is preserved by scaling
+    both dimensions with the same factor. ``scale_factor == 1`` returns the
+    input array unchanged (no resize call, no copy semantics change).
+    Returns ``(image, resize_runtime_ms)``.
+    """
+    import cv2
+
+    if scale_factor not in ALLOWED_SCALE_FACTORS:
+        raise JerseyMMOCRError(f"scale_factor must be one of {ALLOWED_SCALE_FACTORS}: {scale_factor}")
+    if roi_image is None or getattr(roi_image, "size", 0) == 0:
+        raise JerseyMMOCRError("cannot resize an empty ROI")
+    if roi_image.ndim != 3 or roi_image.shape[2] != 3:
+        raise JerseyMMOCRError("ROI must be an HxWx3 BGR array")
+    if scale_factor == 1:
+        return roi_image, 0.0
+    height, width = roi_image.shape[:2]
+    start = time.perf_counter()
+    resized = cv2.resize(
+        roi_image,
+        (width * scale_factor, height * scale_factor),
+        interpolation=cv2.INTER_CUBIC,
+    )
+    resize_ms = (time.perf_counter() - start) * 1000.0
+    if resized.shape[:2] != (height * scale_factor, width * scale_factor):
+        raise JerseyMMOCRError(
+            f"invalid resize result: expected {(height * scale_factor, width * scale_factor)}, "
+            f"got {resized.shape[:2]}"
+        )
+    return resized, resize_ms
+
+
+def scale_coords_to_original(values: Sequence[float], scale_factor: int) -> list[float]:
+    """Map scaled-ROI coordinates back to the original ROI coordinate system."""
+    if scale_factor not in ALLOWED_SCALE_FACTORS:
+        raise JerseyMMOCRError(f"scale_factor must be one of {ALLOWED_SCALE_FACTORS}: {scale_factor}")
+    return [float(value) / float(scale_factor) for value in values]
+
+
+def extract_recognition_candidates(rec_pred: Mapping[str, Any]) -> list[dict[str, Any]]:
+    """Normalize a recognizer prediction into an ordered candidate list.
+
+    MMOCR's ``TextRecInferencer`` normally returns a single ``text``/``scores``
+    pair; if a list is returned, the raw API order is preserved.
+    """
+    raw_text = rec_pred.get("text")
+    raw_score = rec_pred.get("scores")
+    if isinstance(raw_text, (list, tuple)):
+        texts = list(raw_text)
+        scores = list(raw_score) if isinstance(raw_score, (list, tuple)) else [raw_score] * len(texts)
+    else:
+        texts = [raw_text]
+        scores = [raw_score]
+    candidates: list[dict[str, Any]] = []
+    for api_index, (text, score) in enumerate(zip(texts, scores)):
+        normalized = normalize_recognized_text(text)
+        digit, rejection = extract_digit_candidate(normalized)
+        candidates.append(
+            {
+                "api_index": api_index,
+                "raw_text": text,
+                "normalized_text": normalized,
+                "recognizer_score": float(score) if score is not None else None,
+                "accepted_digit_candidate": digit,
+                "candidate_rejection_reason": rejection,
+            }
+        )
+    return candidates
+
+
+def select_direct_sar_digit(candidates: Sequence[Mapping[str, Any]]) -> Optional[dict[str, Any]]:
+    """Select the strict digit candidate for a direct SAR call.
+
+    Rules (no threshold): highest recognizer confidence wins; equal
+    confidence resolves by API order; if no candidate carries confidence,
+    the deterministic first strict digit candidate is selected.
+    """
+    strict = [c for c in candidates if c.get("accepted_digit_candidate") is not None]
+    if not strict:
+        return None
+    if all(c.get("recognizer_score") is None for c in strict):
+        best = strict[0]
+    else:
+        best = max(
+            strict,
+            key=lambda c: (
+                c["recognizer_score"] if c.get("recognizer_score") is not None else float("-inf"),
+                -int(c["api_index"]),
+            ),
+        )
+    return {
+        "digit_string": best["accepted_digit_candidate"],
+        "recognizer_score": best.get("recognizer_score"),
+        "api_index": int(best["api_index"]),
+    }
+
+
+def validate_ablation_variants(variants: Sequence[Mapping[str, Any]]) -> None:
+    """Enforce the fixed Stage 5C-C2 experiment matrix (order included)."""
+    got = [
+        (v["variant_id"], bool(v["detector_used"]), int(v["scale_factor"]))
+        for v in variants
+    ]
+    expected = [
+        (v["variant_id"], bool(v["detector_used"]), int(v["scale_factor"]))
+        for v in ABLATION_VARIANTS
+    ]
+    if got != expected:
+        raise JerseyMMOCRError(f"ablation variant matrix mismatch: {got} != {expected}")
+
+
+def predict_item_ablation_variant(
+    item: Mapping[str, Any],
+    variant: Mapping[str, Any],
+    detector: Any,
+    recognizer: Any,
+    model_meta: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Run one blind-manifest item through one ablation variant.
+
+    ROI coordinates come unchanged from the Stage 5A number-search ROI in the
+    blind manifest; the only allowed transform is the exact integer
+    INTER_CUBIC upscale defined by the variant.
+    """
+    import cv2
+
+    variant_id = variant["variant_id"]
+    detector_used = bool(variant["detector_used"])
+    scale_factor = int(variant["scale_factor"])
+    prediction: dict[str, Any] = {
+        "schema_version": ABLATION_PREDICTION_SCHEMA_VERSION,
+        "review_item_id": item["review_item_id"],
+        "pilot_index": int(item["pilot_index"]),
+        "selection_class": item["selection_class"],
+        "crop_id": item["crop_id"],
+        "segment_id": item["segment_id"],
+        "raw_track_id": int(item["raw_track_id"]),
+        "frame_index": int(item["frame_index"]),
+        "source_crop_path": item["source_crop_path"],
+        "source_crop_sha256": item["source_crop_sha256"],
+        **dict(model_meta),
+        "variant_id": variant_id,
+        "detector_used": detector_used,
+        "recognizer_used": True,
+        "recognition_scope": (
+            "detector_regions" if detector_used else "full_number_search_roi"
+        ),
+        "scale_factor": scale_factor,
+        "interpolation": ABLATION_INTERPOLATION if scale_factor != 1 else None,
+        "preprocessing_variant": f"number_search_roi_{variant_id}",
+        "color_convention": "bgr",
+        "original_image_width": None,
+        "original_image_height": None,
+        "roi_xyxy": None,
+        "original_roi_width": None,
+        "original_roi_height": None,
+        "processed_roi_width": None,
+        "processed_roi_height": None,
+        "detected_text_regions": [],
+        "detector_region_count": None,
+        "recognizer_call_count": 0,
+        "raw_recognition_candidates": [],
+        "selected_digit_string": None,
+        "selected_recognition_confidence": None,
+        "selected_detector_confidence": None,
+        "selected_combined_confidence": None,
+        "rejection_reason": None,
+        "resize_runtime_ms": None,
+        "detector_runtime_ms": None,
+        "recognizer_runtime_ms": None,
+        "total_runtime_ms": None,
+        "warnings": [],
+        "inference_error": None,
+    }
+
+    total_start = time.perf_counter()
+    crop_path = Path(item["source_crop_path"])
+    actual_sha = sha256_file(crop_path)
+    if actual_sha != item["source_crop_sha256"]:
+        raise JerseyMMOCRError(
+            f"crop sha256 mismatch for {item['review_item_id']}: "
+            f"expected {item['source_crop_sha256']}, got {actual_sha}"
+        )
+
+    try:
+        image = cv2.imread(str(crop_path), cv2.IMREAD_COLOR)
+        if image is None or image.ndim != 3 or image.shape[2] != 3:
+            raise JerseyMMOCRError(f"could not decode crop as BGR image: {crop_path}")
+        height, width = image.shape[:2]
+        prediction["original_image_width"] = int(width)
+        prediction["original_image_height"] = int(height)
+
+        roi_bounds = clamp_roi(
+            item["roi_x_min"], item["roi_y_min"], item["roi_x_max"], item["roi_y_max"], width, height
+        )
+        if roi_bounds is None:
+            prediction["rejection_reason"] = "roi_invalid"
+            prediction["total_runtime_ms"] = (time.perf_counter() - total_start) * 1000.0
+            return prediction
+        x1, y1, x2, y2 = roi_bounds
+        prediction["roi_xyxy"] = [x1, y1, x2, y2]
+        prediction["original_roi_width"] = x2 - x1
+        prediction["original_roi_height"] = y2 - y1
+        roi_image = image[y1:y2, x1:x2]
+
+        processed, resize_ms = resize_roi_deterministic(roi_image, scale_factor)
+        prediction["resize_runtime_ms"] = resize_ms
+        prediction["processed_roi_width"] = int(processed.shape[1])
+        prediction["processed_roi_height"] = int(processed.shape[0])
+
+        if not detector_used:
+            rec_start = time.perf_counter()
+            rec_result = recognizer(processed, return_vis=False, progress_bar=False)
+            prediction["recognizer_runtime_ms"] = (time.perf_counter() - rec_start) * 1000.0
+            prediction["recognizer_call_count"] = 1
+            rec_pred = rec_result["predictions"][0]
+            candidates = extract_recognition_candidates(rec_pred)
+            prediction["raw_recognition_candidates"] = candidates
+            selection = select_direct_sar_digit(candidates)
+            if selection is None:
+                reasons = [c["candidate_rejection_reason"] for c in candidates]
+                prediction["rejection_reason"] = reasons[0] if reasons else "recognizer_no_digit"
+            else:
+                prediction["selected_digit_string"] = selection["digit_string"]
+                prediction["selected_recognition_confidence"] = selection["recognizer_score"]
+                prediction["selected_combined_confidence"] = selection["recognizer_score"]
+        else:
+            det_start = time.perf_counter()
+            det_result = detector(processed, return_vis=False, progress_bar=False)
+            prediction["detector_runtime_ms"] = (time.perf_counter() - det_start) * 1000.0
+            det_pred = det_result["predictions"][0]
+            polygons = det_pred.get("polygons", []) or []
+            det_scores = det_pred.get("scores", []) or []
+            prediction["detector_region_count"] = len(polygons)
+            if not polygons:
+                prediction["rejection_reason"] = "detector_no_region"
+                prediction["total_runtime_ms"] = (time.perf_counter() - total_start) * 1000.0
+                return prediction
+            regions: list[dict[str, Any]] = []
+            rec_total_ms = 0.0
+            for region_index, polygon in enumerate(polygons):
+                det_score = (
+                    float(det_scores[region_index]) if region_index < len(det_scores) else None
+                )
+                region: dict[str, Any] = {
+                    "region_index": region_index,
+                    "polygon_scaled": [float(v) for v in polygon],
+                    "polygon_original": scale_coords_to_original(polygon, scale_factor),
+                    "detector_score": det_score,
+                    "region_bbox_scaled_xyxy": None,
+                    "region_bbox_original_xyxy": None,
+                    "raw_text": None,
+                    "normalized_text": None,
+                    "recognizer_score": None,
+                    "accepted_digit_candidate": None,
+                    "region_rejection_reason": None,
+                }
+                bbox = polygon_to_bbox(polygon)
+                bounds = clamp_roi(
+                    bbox[0], bbox[1], bbox[2], bbox[3], processed.shape[1], processed.shape[0]
+                )
+                if bounds is None:
+                    region["region_rejection_reason"] = "degenerate_region"
+                    regions.append(region)
+                    continue
+                bx1, by1, bx2, by2 = bounds
+                region["region_bbox_scaled_xyxy"] = [bx1, by1, bx2, by2]
+                region["region_bbox_original_xyxy"] = scale_coords_to_original(
+                    [bx1, by1, bx2, by2], scale_factor
+                )
+                rec_start = time.perf_counter()
+                rec_result = recognizer(
+                    processed[by1:by2, bx1:bx2], return_vis=False, progress_bar=False
+                )
+                rec_total_ms += (time.perf_counter() - rec_start) * 1000.0
+                prediction["recognizer_call_count"] += 1
+                rec_pred = rec_result["predictions"][0]
+                raw_text = rec_pred.get("text")
+                rec_score = rec_pred.get("scores")
+                normalized = normalize_recognized_text(raw_text)
+                digit, rejection = extract_digit_candidate(normalized)
+                region["raw_text"] = raw_text
+                region["normalized_text"] = normalized
+                region["recognizer_score"] = float(rec_score) if rec_score is not None else None
+                region["accepted_digit_candidate"] = digit
+                region["region_rejection_reason"] = rejection
+                regions.append(region)
+                prediction["raw_recognition_candidates"].append(
+                    {
+                        "region_index": region_index,
+                        "raw_text": raw_text,
+                        "normalized_text": normalized,
+                        "recognizer_score": region["recognizer_score"],
+                    }
+                )
+            prediction["recognizer_runtime_ms"] = rec_total_ms
+            prediction["detected_text_regions"] = regions
+            selection = select_digit_from_regions(regions)
+            if selection is None:
+                prediction["rejection_reason"] = "recognizer_no_digit"
+            else:
+                prediction["selected_digit_string"] = selection["digit_string"]
+                prediction["selected_recognition_confidence"] = selection["recognizer_score"]
+                prediction["selected_detector_confidence"] = selection["detector_score"]
+                prediction["selected_combined_confidence"] = selection["combined_score"]
+    except JerseyMMOCRError:
+        raise
+    except Exception as error:  # pragma: no cover - depends on runtime model failures
+        prediction["inference_error"] = f"{type(error).__name__}: {error}"
+
+    prediction["total_runtime_ms"] = (time.perf_counter() - total_start) * 1000.0
+    return prediction
+
+
+def run_ablation_inference(
+    items: Sequence[Mapping[str, Any]],
+    variants: Sequence[Mapping[str, Any]],
+    detector: Any,
+    recognizer: Any,
+    model_meta: Mapping[str, Any],
+) -> list[dict[str, Any]]:
+    """Run the fixed variant matrix over the blind manifest.
+
+    Output ordering is variant-major (exact contract order) with
+    pilot_index ascending inside each variant: 46 items x 4 variants = 184.
+    """
+    validate_ablation_variants(variants)
+    assert_blind_records_safe(items)
+    ordered_items = sorted(items, key=lambda item: int(item["pilot_index"]))
+    predictions: list[dict[str, Any]] = []
+    for variant in variants:
+        for item in ordered_items:
+            predictions.append(
+                predict_item_ablation_variant(item, variant, detector, recognizer, model_meta)
+            )
+    expected_total = len(ordered_items) * len(variants)
+    if len(predictions) != expected_total:
+        raise JerseyMMOCRError(
+            f"ablation prediction count mismatch: expected {expected_total}, got {len(predictions)}"
+        )
+    return predictions
+
+
+def _ablation_outcome(prediction: Mapping[str, Any], reference: Mapping[str, Any]) -> str:
+    predicted = prediction.get("selected_digit_string")
+    if prediction.get("inference_error") is not None:
+        return "inference_error"
+    if prediction["selection_class"] == POSITIVE_CLASS:
+        expected = (reference["manual_jersey_number"] or "").strip()
+        if predicted is None:
+            return "no_prediction"
+        return "exact_match" if predicted == expected else "wrong_number"
+    return "number_emitted" if predicted is not None else "rejected"
+
+
+def evaluate_ablation_predictions(
+    predictions: Sequence[Mapping[str, Any]],
+    reference_rows: Sequence[Mapping[str, Any]],
+    expected_class_counts: Mapping[str, int],
+) -> tuple[list[dict[str, Any]], dict[str, Any]]:
+    """Join 184 variant predictions with the 46-row evaluation reference."""
+    reference_by_id = {row["review_item_id"]: row for row in reference_rows}
+    if len(reference_by_id) != len(reference_rows):
+        raise JerseyMMOCRError("duplicate review_item_id in ablation evaluation reference")
+    expected_total = len(reference_rows) * len(ABLATION_VARIANT_IDS)
+    if len(predictions) != expected_total:
+        raise JerseyMMOCRError(
+            f"ablation join mismatch: {len(predictions)} predictions != {expected_total}"
+        )
+
+    item_rows: list[dict[str, Any]] = []
+    for prediction in predictions:
+        reference = reference_by_id.get(prediction["review_item_id"])
+        if reference is None:
+            raise JerseyMMOCRError(
+                f"ablation prediction without reference: {prediction['review_item_id']}"
+            )
+        if reference["selection_class"] != prediction["selection_class"]:
+            raise JerseyMMOCRError(
+                f"selection_class mismatch for {prediction['review_item_id']}"
+            )
+        outcome = _ablation_outcome(prediction, reference)
+        item_rows.append(
+            {
+                "schema_version": ABLATION_ITEM_EVALUATION_SCHEMA_VERSION,
+                "variant_id": prediction["variant_id"],
+                "pilot_index": prediction["pilot_index"],
+                "review_item_id": prediction["review_item_id"],
+                "selection_class": prediction["selection_class"],
+                "outcome": outcome,
+                "predicted_digit_string": prediction.get("selected_digit_string"),
+                "manual_jersey_number": reference["manual_jersey_number"],
+                "manual_crop_valid": reference["manual_crop_valid"],
+                "manual_number_visible": reference["manual_number_visible"],
+                "manual_number_readable": reference["manual_number_readable"],
+                "selected_recognition_confidence": prediction.get(
+                    "selected_recognition_confidence"
+                ),
+                "selected_detector_confidence": prediction.get("selected_detector_confidence"),
+                "rejection_reason": prediction.get("rejection_reason"),
+                "inference_error": prediction.get("inference_error"),
+                "detector_region_count": prediction.get("detector_region_count"),
+                "total_runtime_ms": prediction.get("total_runtime_ms"),
+            }
+        )
+    variant_summary = build_ablation_variant_summary(
+        item_rows, predictions, expected_class_counts
+    )
+    return item_rows, variant_summary
+
+
+def _distribution(values: Sequence[Optional[str]]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        key = value if value is not None else "null"
+        counts[key] = counts.get(key, 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def build_ablation_variant_summary(
+    item_rows: Sequence[Mapping[str, Any]],
+    predictions: Sequence[Mapping[str, Any]],
+    expected_class_counts: Mapping[str, int],
+) -> dict[str, Any]:
+    """Per-variant positive/negative metrics for the fixed matrix."""
+    per_variant: dict[str, Any] = {}
+    for variant_id in ABLATION_VARIANT_IDS:
+        rows = [row for row in item_rows if row["variant_id"] == variant_id]
+        preds = [p for p in predictions if p["variant_id"] == variant_id]
+        if len(rows) != sum(expected_class_counts.values()):
+            raise JerseyMMOCRError(f"variant row count mismatch for {variant_id}")
+        positive = [row for row in rows if row["selection_class"] == POSITIVE_CLASS]
+        negative = [row for row in rows if row["selection_class"] != POSITIVE_CLASS]
+        positive_preds = [p for p in preds if p["selection_class"] == POSITIVE_CLASS]
+        exact = sum(1 for row in positive if row["outcome"] == "exact_match")
+        per_jersey: dict[str, dict[str, int]] = {}
+        for row in positive:
+            entry = per_jersey.setdefault(
+                row["manual_jersey_number"], {"item_count": 0, "exact_match_count": 0}
+            )
+            entry["item_count"] += 1
+            if row["outcome"] == "exact_match":
+                entry["exact_match_count"] += 1
+        raw_texts: list[Optional[str]] = []
+        for p in positive_preds:
+            for candidate in p.get("raw_recognition_candidates", []):
+                raw_texts.append(candidate.get("normalized_text"))
+        direct_non_digit = 0
+        direct_empty = 0
+        for p in preds:
+            if p.get("detector_used"):
+                continue
+            for candidate in p.get("raw_recognition_candidates", []):
+                if candidate.get("candidate_rejection_reason") == "empty_text":
+                    direct_empty += 1
+                elif candidate.get("candidate_rejection_reason") is not None:
+                    direct_non_digit += 1
+        region_counts = [
+            p.get("detector_region_count")
+            for p in preds
+            if p.get("detector_used")
+        ]
+        negative_classes: dict[str, dict[str, Any]] = {}
+        for class_name in NEGATIVE_CLASSES:
+            class_rows = [row for row in negative if row["selection_class"] == class_name]
+            emissions = sum(1 for row in class_rows if row["outcome"] == "number_emitted")
+            negative_classes[class_name] = {
+                "item_count": len(class_rows),
+                "number_emission_count": emissions,
+                "rejection_count": sum(1 for row in class_rows if row["outcome"] == "rejected"),
+                "inference_error_count": sum(
+                    1 for row in class_rows if row["outcome"] == "inference_error"
+                ),
+                "emission_rate": emissions / len(class_rows) if class_rows else None,
+            }
+        runtimes = [p.get("total_runtime_ms") for p in preds if p.get("total_runtime_ms") is not None]
+        ordered_runtimes = sorted(float(v) for v in runtimes)
+        p95_index = max(0, math.ceil(0.95 * len(ordered_runtimes)) - 1) if ordered_runtimes else None
+        per_variant[variant_id] = {
+            "positive": {
+                "item_count": len(positive),
+                "exact_match_count": exact,
+                "exact_match_rate": exact / len(positive) if positive else None,
+                "number_emission_count": sum(
+                    1 for row in positive if row["predicted_digit_string"] is not None
+                ),
+                "no_prediction_count": sum(1 for row in positive if row["outcome"] == "no_prediction"),
+                "wrong_number_count": sum(1 for row in positive if row["outcome"] == "wrong_number"),
+                "inference_error_count": sum(
+                    1 for row in positive if row["outcome"] == "inference_error"
+                ),
+                "per_jersey_exact_match": per_jersey,
+                "raw_text_distribution": _distribution(raw_texts),
+                "rejection_reason_distribution": _distribution(
+                    [row["rejection_reason"] for row in positive]
+                ),
+                "recognition_confidence": _confidence_stats(
+                    [p.get("selected_recognition_confidence") for p in positive_preds]
+                ),
+            },
+            "negative": {
+                "item_count": len(negative),
+                "number_emission_count": sum(
+                    1 for row in negative if row["outcome"] == "number_emitted"
+                ),
+                "emission_rate": (
+                    sum(1 for row in negative if row["outcome"] == "number_emitted") / len(negative)
+                    if negative
+                    else None
+                ),
+                "rejection_count": sum(1 for row in negative if row["outcome"] == "rejected"),
+                "inference_error_count": sum(
+                    1 for row in negative if row["outcome"] == "inference_error"
+                ),
+                "per_class": negative_classes,
+                "invalid_crop_number_emission_count": negative_classes["E_invalid"][
+                    "number_emission_count"
+                ],
+                "uncertain_signal_number_emission_count": negative_classes["C_uncertain_signal"][
+                    "number_emission_count"
+                ],
+                "visible_unreadable_number_emission_count": negative_classes[
+                    "B_visible_unreadable"
+                ]["number_emission_count"],
+            },
+            "counters": {
+                "direct_sar_non_digit_output_count": direct_non_digit,
+                "direct_sar_empty_output_count": direct_empty,
+                "detector_region_item_count": sum(
+                    1 for count in region_counts if count is not None and count > 0
+                ),
+                "detector_no_region_item_count": sum(
+                    1 for count in region_counts if count == 0
+                ),
+                "detector_total_region_count": sum(
+                    int(count) for count in region_counts if count is not None
+                ),
+                "inference_error_count": sum(
+                    1 for p in preds if p.get("inference_error") is not None
+                ),
+            },
+            "runtime": {
+                "mean_ms": statistics.fmean(ordered_runtimes) if ordered_runtimes else None,
+                "median_ms": statistics.median(ordered_runtimes) if ordered_runtimes else None,
+                "p95_ms": ordered_runtimes[p95_index] if ordered_runtimes else None,
+                "sum_ms": sum(ordered_runtimes) if ordered_runtimes else None,
+            },
+        }
+    return {
+        "schema_version": ABLATION_VARIANT_SUMMARY_SCHEMA_VERSION,
+        "variant_order": list(ABLATION_VARIANT_IDS),
+        "expected_class_counts": dict(expected_class_counts),
+        "per_variant": per_variant,
+    }
+
+
+def build_ablation_comparison_summary(
+    variant_summary: Mapping[str, Any],
+    c1_baseline: Mapping[str, Any],
+) -> dict[str, Any]:
+    """Deterministic descriptive comparison against the frozen C1 baseline.
+
+    Ranking is descriptive only and is not an automatic deployment decision.
+    """
+    per_variant = variant_summary["per_variant"]
+
+    def row(variant_id: str) -> dict[str, Any]:
+        entry = per_variant[variant_id]
+        return {
+            "variant_id": variant_id,
+            "positive_exact_match_count": entry["positive"]["exact_match_count"],
+            "positive_number_emission_count": entry["positive"]["number_emission_count"],
+            "positive_wrong_number_count": entry["positive"]["wrong_number_count"],
+            "positive_no_prediction_count": entry["positive"]["no_prediction_count"],
+            "negative_number_emission_count": entry["negative"]["number_emission_count"],
+            "median_runtime_ms": entry["runtime"]["median_ms"],
+        }
+
+    table = [
+        {
+            "variant_id": "c1_dbnet_sar_roi_1x_baseline",
+            "positive_exact_match_count": c1_baseline["positive_exact_match_count"],
+            "positive_number_emission_count": c1_baseline["positive_number_emission_count"],
+            "positive_wrong_number_count": c1_baseline["positive_wrong_number_count"],
+            "positive_no_prediction_count": c1_baseline["positive_no_prediction_count"],
+            "negative_number_emission_count": c1_baseline["negative_number_emission_count"],
+            "median_runtime_ms": c1_baseline["median_runtime_ms"],
+            "is_frozen_baseline": True,
+        }
+    ] + [row(variant_id) for variant_id in ABLATION_VARIANT_IDS]
+
+    def ranking_key(entry: Mapping[str, Any]) -> tuple:
+        return (
+            -entry["positive_exact_match_count"],
+            entry["negative_number_emission_count"],
+            entry["positive_wrong_number_count"],
+            entry["positive_no_prediction_count"],
+            entry["median_runtime_ms"] if entry["median_runtime_ms"] is not None else float("inf"),
+            ABLATION_VARIANT_IDS.index(entry["variant_id"]),
+        )
+
+    ranked = sorted(
+        (row(variant_id) for variant_id in ABLATION_VARIANT_IDS), key=ranking_key
+    )
+
+    direct_ids = [v for v in ABLATION_VARIANT_IDS if v.startswith("direct_sar")]
+    direct_exact = {v: per_variant[v]["positive"]["exact_match_count"] for v in direct_ids}
+    labels: list[str] = []
+    if any(count > 0 for count in direct_exact.values()):
+        labels.append(LABEL_DIRECT_EXACT)
+    if (
+        direct_exact["direct_sar_roi_2x_cubic"] > direct_exact["direct_sar_roi_1x"]
+        or direct_exact["direct_sar_roi_4x_cubic"] > direct_exact["direct_sar_roi_1x"]
+    ):
+        labels.append(LABEL_UPSCALE_RECOGNITION)
+    if (
+        per_variant["dbnet_sar_roi_4x_cubic"]["counters"]["detector_region_item_count"]
+        > c1_baseline["detector_region_item_count"]
+    ):
+        labels.append(LABEL_UPSCALE_DETECTION)
+    if all(
+        per_variant[v]["positive"]["exact_match_count"] == 0 for v in ABLATION_VARIANT_IDS
+    ):
+        labels.append(LABEL_NO_EXACT)
+    if any(
+        per_variant[v]["negative"]["number_emission_count"] > 0 for v in ABLATION_VARIANT_IDS
+    ):
+        labels.append(LABEL_NEGATIVE_RISK)
+
+    return {
+        "schema_version": ABLATION_COMPARISON_SCHEMA_VERSION,
+        "c1_baseline": dict(c1_baseline),
+        "comparison_table": table,
+        "descriptive_ranking": [entry["variant_id"] for entry in ranked],
+        "ranking_criteria": [
+            "higher positive exact_match_count",
+            "lower negative number_emission_count",
+            "lower positive wrong_number_count",
+            "lower positive no_prediction_count",
+            "lower median runtime",
+        ],
+        "ranking_is_deployment_decision": False,
+        "evidence_labels": labels,
+        "confidence_note": (
+            "Recognizer confidences are not calibrated between the detector "
+            "pipeline and the direct-recognizer pipeline; values are not "
+            "directly comparable across variants."
+        ),
+        "interpretation_limits": [
+            "46 deterministic pilot crops only; not a general accuracy benchmark",
+            "no threshold selection or confidence calibration was performed",
+            "only exact integer INTER_CUBIC upscaling was tested; no other preprocessing",
+            "ROI coordinates, source crops, checkpoints, and configs are unchanged from C1",
+            "no segment aggregation and no identity decision were made",
+        ],
+    }

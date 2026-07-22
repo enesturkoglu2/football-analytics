@@ -50,7 +50,7 @@ Python yolu:
 - Python 3.10.20
 - torch 2.13.0+cpu
 - Ana video/detection/tracking/ReID geliştirme ortamı
-- Mevcut test suite (398 test) bu ortamda çalışır
+- Mevcut test suite (443 test) bu ortamda çalışır
 
 Ortam izolasyonu:
 
@@ -141,13 +141,13 @@ Ana dal:
 
     94daa9e Create project foundation and record environment
 
-Güncel durum (Stage 5C-C1 freeze / documentation sync öncesi):
+Güncel durum (Stage 5C-C2 freeze / C3A documentation sync öncesi):
 
-- source baseline HEAD: `d35b239` — Update project context for jersey OCR smoke
-- documentation commit: pending/current commit (hash after push;
-  reported in the final gate report)
+- source baseline HEAD: `8c4324d` — Add offline jersey MMOCR baseline smoke
+- documentation/application commit: pending/current commit (hash after
+  push; reported in the final gate report)
 - `main == origin/main`
-- working tree initially contained the four Stage 5C-C1 application
+- working tree initially contained the four Stage 5C-C2 application
   files plus documentation updates from this gate
 - sistem CPU-only'dir
 
@@ -393,24 +393,78 @@ yüklenmedi):
   `docs/setup/stage5c-jersey-mmocr-baseline-results.md`
 - Technical finding: DBNet detector is the observed bottleneck on the
   current low-resolution number-search ROI baseline
-- C2 not started
+
+### Stage 5C-C2 controlled ablation (completed)
+
+- Status: `completed_no_exact_signal_in_tested_variants`
+- Pipeline: successful (184/184, `inference_error=0`,
+  `pass_loopback_only`)
+- Exact matrix: `direct_sar_roi_1x`, `direct_sar_roi_2x_cubic`,
+  `direct_sar_roi_4x_cubic`, `dbnet_sar_roi_4x_cubic`
+- Exact match: 0/20 on all four new variants (smoke-set only; not a
+  general accuracy benchmark)
+- Direct SAR 1×/2×/4×: wrong low-confidence digit emissions only
+  (3/2/2); negative emission 0/26
+- DBNet+SAR 4×: region items 1→6, total regions 52; still exact 0/20
+- Evidence labels: `UPSCALE_IMPROVES_DETECTION`,
+  `NO_EXACT_SIGNAL_IN_TESTED_VARIANTS`
+- Model-family status: general scene-text DBNet/SAR
+  `closed_after_controlled_negative_result`
+- Ablation freeze:
+  `outputs/reid/full_stage4b/jersey_mmocr_ablation_freeze_stage5c_c2`
+- Application files:
+  `src/football_analytics/reid/jersey_mmocr.py` (ablation additions),
+  `scripts/run_reid_jersey_mmocr_ablation.py`,
+  `configs/reid/jersey_mmocr_ablation_stage5c_c2.yaml`,
+  `tests/test_reid_jersey_mmocr_ablation.py`
+- Results doc:
+  `docs/setup/stage5c-jersey-mmocr-ablation-results.md`
+
+### Stage 5C-C2a / C2b region review
+
+- C2a package:
+  `outputs/reid/full_stage4b/jersey_mmocr_detector_region_review_stage5c_c2a`
+  — `review_package_generated_unreviewed` (52 regions)
+- C2b: `skipped_by_project_decision_not_required_for_c3a`
+  (working CSV blank; manual review not performed; localization
+  failure not manually confirmed)
+
+### Stage 5C-C3A PARSeq capability audit (completed; no install)
+
+- External repo:
+  `/home/enesturkoglu2/projects/external/jersey-number-pipeline`
+  HEAD `007d54e5530a66616ed5081ca35e0028b36aadb5` (clean)
+- SoccerNet fine-tuned PARSeq checkpoint metadata:
+  Drive ID `1uRln22tlhneVt3P6MePmVxBWSLMsL3bm`;
+  expected
+  `parseq_epoch=24-step=2575-val_accuracy=95.6044-val_NED=96.3255.ckpt`;
+  ~364M; `publicly_accessible_metadata_resolved`;
+  official checksum unavailable; **not downloaded**
+- CPU: `cpu_supported_with_small_adapter`
+- Dataset: `dataset_not_required_for_initial_local_smoke`
+- Stop/go: `GO_STAGE5C_C3B_ENV_PLAN`
+- Proposed next env name: `sn-jersey-parseq-cpu` (**not created**)
+- Audit doc: `docs/setup/stage5c-parseq-capability-audit.md`
+- PARSeq is **not** installed or run in this gate
 
 ## 8. Aktif kapı ve sıradaki adımlar
 
 Güncel durum:
 
-- **Stage 5C-C1:** `completed_offline_smoke_low_signal_baseline`
-- **Sıradaki kapı:** Stage 5C-C2 — controlled recognizer/preprocessing
-  ablation
+- **Stage 5C-C2:** `completed_no_exact_signal_in_tested_variants`
+- **Stage 5C-C3A:** `completed_audit_no_install`
+- **Sıradaki kapı:** Stage 5C-C3B — isolated PARSeq CPU environment
 
 Planlanan sıra:
 
-1. Stage 5C-C1 freeze + documentation sync commit (bu kapı)
-2. Stage 5C-C2 controlled recognizer/preprocessing ablation
-3. Stage 5C-D segment-level OCR aggregation
-4. Stage 5D target gallery/enrollment
-5. Stage 5E evidence fusion
-6. Stage 6 spatial continuity / pitch position
+1. Stage 5C-C2 freeze + C3A documentation sync commit (bu kapı)
+2. Stage 5C-C3B isolated `sn-jersey-parseq-cpu` environment
+3. Stage 5C-C3C controlled PARSeq checkpoint acquisition
+4. Stage 5C-C3D offline recognizer-only smoke on frozen 46 crops
+5. Stage 5C-D segment-level OCR aggregation
+6. Stage 5D target gallery/enrollment
+7. Stage 5E evidence fusion
+8. Stage 6 spatial continuity / pitch position
 
 ## 9. Cursor için zorunlu kurallar
 
@@ -546,8 +600,8 @@ Sınırlar:
 
 ## 11. Mevcut öncelik
 
-Stage 5C-C1 tamamlandı; sıradaki kapı **Stage 5C-C2 controlled
-recognizer/preprocessing ablation**:
+Stage 5C-C2 tamamlandı; genel DBNet/SAR ailesi kapatıldı; sıradaki
+kapı **Stage 5C-C3B isolated PARSeq CPU environment**:
 
     Video okuma
     → İnsan/oyuncu tespiti (tamamlandı)
@@ -557,9 +611,11 @@ recognizer/preprocessing ablation**:
     → Crop quality / kit / purity / segmentation (5A-5B tamamlandı)
     → Jersey visibility + 78-item manuel pilot (5C-A tamamlandı)
     → MMOCR environment + DBNet/SAR asset (5C-B tamamlandı)
-    → Offline CPU jersey OCR baseline smoke (5C-C1 tamamlandı;
-      pipeline başarılı, current ROI üzerinde DBNet low-signal)
-    → Controlled recognizer/preprocessing ablation (5C-C2 — sıradaki)
+    → Offline CPU jersey OCR baseline smoke (5C-C1 tamamlandı)
+    → Controlled ablation (5C-C2 tamamlandı; no exact signal;
+      DBNet/SAR family closed; jersey OCR not abandoned)
+    → PARSeq capability audit (5C-C3A tamamlandı; no install)
+    → Isolated PARSeq CPU environment (5C-C3B — sıradaki)
     → Segment aggregation / gallery / fusion (5C-D, 5D, 5E)
     → Spatial continuity (Stage 6)
 

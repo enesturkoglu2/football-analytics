@@ -47,21 +47,27 @@ Tamamlananlar:
 - [x] İzole MMOCR CPU environment kurulumu (Stage 5C-B4)
 - [x] Kontrollü DBNet/SAR asset acquisition (Stage 5C-B5)
 - [x] Offline CPU DBNet+SAR baseline smoke (Stage 5C-C1)
+- [x] Controlled recognizer/preprocessing ablation (Stage 5C-C2)
+- [x] PARSeq jersey capability audit (Stage 5C-C3A; no install)
 
 Henüz yapılmayanlar:
 
-- [ ] Controlled recognizer/preprocessing ablation (Stage 5C-C2)
+- [ ] Isolated PARSeq CPU environment (Stage 5C-C3B)
 - [ ] Confidence threshold seçimi
 - [ ] Segment-level OCR aggregation (Stage 5C-D)
 - [ ] Target enrollment / gallery memory (Stage 5D)
 - [ ] Evidence fusion evaluation (Stage 5E)
 - [ ] Spatial continuity / pitch position (Stage 6)
 
-Stage 5C-C1: pipeline başarılı (46/46, `inference_error=0`,
-`pass_loopback_only`); mevcut düşük çözünürlüklü number-search ROI
-üzerinde DBNet low-signal (readable exact match 0/20). Bu sayı genel
-accuracy benchmark değildir. Sıradaki adım controlled C2 ablation.
-DBNet/SAR asset'leri Git'e commit edilmez.
+Stage 5C-C2: ablation pipeline başarılı (46×4=184 prediction,
+`inference_error=0`); dört test edilen varyantta exact match 0/20
+(`NO_EXACT_SIGNAL_IN_TESTED_VARIANTS`). Mevcut genel scene-text
+DBNet/SAR checkpoint ailesi kontrollü negatif sonuç sonrası
+kapatılmıştır; jersey OCR ürün yolu iptal edilmemiştir. Sıradaki
+aday: SoccerNet fine-tuned PARSeq (henüz kurulmadı / çalıştırılmadı).
+C2b detector-region manuel review non-blocking olarak atlandı
+(`skipped_by_project_decision`). İlk PARSeq smoke için SoccerNet
+dataset gerekli değildir. Checkpoint/asset'ler Git'e commit edilmez.
 
 ## Geliştirme ortamları
 
@@ -88,6 +94,10 @@ Aktivasyon:
   — 78-item manuel jersey pilot sonuçları
 - [docs/setup/stage5c-jersey-mmocr-baseline-results.md](docs/setup/stage5c-jersey-mmocr-baseline-results.md)
   — Stage 5C-C1 offline DBNet+SAR baseline smoke sonuçları
+- [docs/setup/stage5c-jersey-mmocr-ablation-results.md](docs/setup/stage5c-jersey-mmocr-ablation-results.md)
+  — Stage 5C-C2 controlled ablation sonuçları ve model-family kapanışı
+- [docs/setup/stage5c-parseq-capability-audit.md](docs/setup/stage5c-parseq-capability-audit.md)
+  — Stage 5C-C3A SoccerNet fine-tuned PARSeq capability audit
 - [docs/setup/reid-stage4b-completion.md](docs/setup/reid-stage4b-completion.md)
   — Stage 4B ReID baseline kapanış raporu
 
