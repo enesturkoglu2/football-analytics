@@ -27,8 +27,8 @@ video
 → OSNet appearance embedding
 → segment construction
 → jersey visibility / ROI
-→ DBNet text detection
-→ SAR text recognition
+→ SoccerNet-finetuned PARSeq recognizer (primary candidate)
+→ future legibility / holdout / aggregation gates
 → segment-level evidence
 → future target gallery / fusion
 ```
@@ -49,25 +49,33 @@ Tamamlananlar:
 - [x] Offline CPU DBNet+SAR baseline smoke (Stage 5C-C1)
 - [x] Controlled recognizer/preprocessing ablation (Stage 5C-C2)
 - [x] PARSeq jersey capability audit (Stage 5C-C3A; no install)
+- [x] Isolated PARSeq CPU environment (Stage 5C-C3B)
+- [x] Controlled SoccerNet PARSeq checkpoint acquisition (Stage 5C-C3C)
+- [x] Offline PARSeq recognizer-only smoke (Stage 5C-C3D)
+- [x] PARSeq false-positive / confidence audit (Stage 5C-C3E)
 
 Henüz yapılmayanlar:
 
-- [ ] Isolated PARSeq CPU environment (Stage 5C-C3B)
-- [ ] Confidence threshold seçimi
+- [ ] Independent holdout design (Stage 5C-C3F-A)
+- [ ] Confidence threshold seçimi / validation
 - [ ] Segment-level OCR aggregation (Stage 5C-D)
 - [ ] Target enrollment / gallery memory (Stage 5D)
 - [ ] Evidence fusion evaluation (Stage 5E)
 - [ ] Spatial continuity / pitch position (Stage 6)
 
-Stage 5C-C2: ablation pipeline başarılı (46×4=184 prediction,
-`inference_error=0`); dört test edilen varyantta exact match 0/20
-(`NO_EXACT_SIGNAL_IN_TESTED_VARIANTS`). Mevcut genel scene-text
-DBNet/SAR checkpoint ailesi kontrollü negatif sonuç sonrası
-kapatılmıştır; jersey OCR ürün yolu iptal edilmemiştir. Sıradaki
-aday: SoccerNet fine-tuned PARSeq (henüz kurulmadı / çalıştırılmadı).
-C2b detector-region manuel review non-blocking olarak atlandı
-(`skipped_by_project_decision`). İlk PARSeq smoke için SoccerNet
-dataset gerekli değildir. Checkpoint/asset'ler Git'e commit edilmez.
+DBNet/SAR ailesi C2 sonrası kapalıdır; jersey OCR iptal edilmedi.
+SoccerNet-finetuned PARSeq primary candidate olmaya devam eder.
+C3D: frozen 46 ROI üzerinde exact **5/20**, wrong **15/20**,
+recognizer-only negative emission **26/26**; runtime contract
+validated; threshold seçilmedi. C3E: confidence descriptive ranking
+sinyali var (exact vs negative AUROC ≈0.938); discovery-set perfect
+safe point gözlendi ama bağımsız validation değildir; mevcut 20
+readable positive'in tamamı C3D discovery set'te kullanıldığı için
+`independent_positive_holdout_available=false`. Sıradaki kapı:
+**Stage 5C-C3F-A independent holdout design**. Legibility classifier
+ileride yardımcı gate adayıdır (henüz kurulmadı/indirilmedi).
+Stage 5D/5E/6 kapsamları değişmedi. Checkpoint/asset'ler Git'e
+commit edilmez.
 
 ## Geliştirme ortamları
 
@@ -75,7 +83,8 @@ dataset gerekli değildir. Checkpoint/asset'ler Git'e commit edilmez.
 |---|---|---|
 | `football-cv` | Ana video/detection/tracking/ReID geliştirme ve test suite | Python 3.10, torch 2.13.0+cpu, ultralytics, OpenCV |
 | `sn-reid-cpu` | OSNet embedding inference (izole) | Python 3.10, torch 2.13.0+cpu |
-| `sn-jersey-mmocr-cpu` | Jersey OCR smoke (izole, MMOCR stack) | Python 3.9, torch 1.13.1+cpu, mmocr 1.0.1, mmcv 2.0.1 |
+| `sn-jersey-mmocr-cpu` | Legacy DBNet/SAR smoke (izole, MMOCR stack; family closed) | Python 3.9, torch 1.13.1+cpu, mmocr 1.0.1, mmcv 2.0.1 |
+| `sn-jersey-parseq-cpu` | PARSeq jersey recognizer smoke (izole) | Python 3.9, torch 1.13.1+cpu, pytorch-lightning 1.9.5, timm 0.9.5 |
 
 Tümü CPU-only'dir; CUDA yoktur ve kurulmayacaktır.
 
@@ -98,6 +107,10 @@ Aktivasyon:
   — Stage 5C-C2 controlled ablation sonuçları ve model-family kapanışı
 - [docs/setup/stage5c-parseq-capability-audit.md](docs/setup/stage5c-parseq-capability-audit.md)
   — Stage 5C-C3A SoccerNet fine-tuned PARSeq capability audit
+- [docs/setup/stage5c-parseq-smoke-results.md](docs/setup/stage5c-parseq-smoke-results.md)
+  — Stage 5C-C3D offline PARSeq smoke sonuçları
+- [docs/setup/stage5c-parseq-false-positive-audit.md](docs/setup/stage5c-parseq-false-positive-audit.md)
+  — Stage 5C-C3E PARSeq confidence / false-positive audit
 - [docs/setup/reid-stage4b-completion.md](docs/setup/reid-stage4b-completion.md)
   — Stage 4B ReID baseline kapanış raporu
 

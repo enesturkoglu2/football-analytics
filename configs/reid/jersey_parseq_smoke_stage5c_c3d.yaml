@@ -1,0 +1,65 @@
+# Stage 5C-C3D offline SoccerNet-finetuned PARSeq recognizer-only smoke.
+# Same frozen 46 Stage 5A ROI crops as C1; no detector; no preprocessing variants.
+schema_version: reid_jersey_parseq_smoke_config_v1
+stage: 5C-C3D
+device: cpu
+max_items: 46
+expected_prediction_count: 46
+offline_required: true
+color_convention: bgr_to_rgb
+roi_source: stage5a_number_search_roi
+manual_labels_blind: true
+
+baseline_freeze:
+  path: outputs/reid/full_stage4b/jersey_mmocr_smoke_baseline_freeze_stage5c_c1
+  inference_manifest_sha256: f6d8ffa9c8b1c00d8861a73337288e4de9ebf0610f947f3b1d920f94dc2abf39
+  evaluation_reference_sha256: fd1684606e7ced670f8fb8938fbadd8a20afb686d14d2e6b2bee3d746d512022
+  freeze_summary_sha256: f6874f4ef64fab1d8ca929d17159e3e21e8ea4006f5c05c2b0de88285c86cfc3
+  freeze_manifest_sha256: 852ea56d13bfca7647117de10e7c3b50d550fa176acf2c4ffe57326cf4b13471
+
+parseq_root: /home/enesturkoglu2/projects/external/jersey-number-pipeline/str/parseq
+external_repo: /home/enesturkoglu2/projects/external/jersey-number-pipeline
+external_repo_head: 007d54e5530a66616ed5081ca35e0028b36aadb5
+
+checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-parseq/soccernet-finetuned/parseq_epoch=24-step=2575-val_accuracy=95.6044-val_NED=96.3255.ckpt
+  sha256: 14aeb3b13876500e04c93674716a3dae54c2e2d4e06b1abe04758d260d314879
+  byte_size: 381608677
+  asset_root: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-parseq/soccernet-finetuned
+  asset_manifest_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-parseq/soccernet-finetuned/checkpoint_asset_manifest.json
+  asset_manifest_sha256: 96e47cd1245f25e3b3189c4324b9bcd0813cae8178d112b4653fd68b76486811
+
+environment:
+  name: sn-jersey-parseq-cpu
+  manifest_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-parseq/environment/environment_manifest.json
+  manifest_sha256_prefix: 7377782dad758f7f
+
+digit_policy:
+  pattern: "^[0-9]{1,2}$"
+  max_digits: 2
+  letter_to_digit_conversion: false
+  confidence_threshold: null
+
+jersey_decode:
+  sequence_positions: 3
+  class_count: 11
+  source: jersey-number-pipeline/str.py_static_reference
+
+selection:
+  expected_counts:
+    POS_readable: 20
+    A_not_visible: 10
+    B_visible_unreadable: 2
+    C_uncertain_signal: 7
+    D_uncertain_crop: 2
+    E_invalid: 5
+
+c1_baseline_metrics:
+  positive_exact_match_count: 0
+  positive_wrong_number_count: 0
+  positive_no_prediction_count: 20
+  negative_number_emission_count: 0
+  network_policy: pass_loopback_only
+
+output:
+  final_dir: outputs/reid/full_stage4b/jersey_parseq_smoke_stage5c_c3d

@@ -1,0 +1,24 @@
+# Stage 5C-C3E read-only PARSeq false-positive / confidence audit.
+# No model load, inference, or threshold selection.
+schema_version: reid_jersey_parseq_false_positive_audit_config_v1
+stage: 5C-C3E
+offline_required: true
+threshold_selection_forbidden: true
+
+c3d_output:
+  path: outputs/reid/full_stage4b/jersey_parseq_smoke_stage5c_c3d
+  run_manifest_sha256: 2fa0ad94f9da59ca97818baf2007f345827eea8eeb0974d4edac44fd99d00df4
+  predictions_sha256: 1cdc8158ed9905a68d51a62bb9d01ef357ec2ccf8f4c47e614a81f883e7450e7
+  item_evaluation_sha256: 166d5ee0a7c8310d941ff719592439b1c39779c36efde3db994b1f58f7cbcee7
+  results_summary_sha256: c3b1f62bc09f7d2729e84547ab9358580cb8ed3920a7bef6f75a172cb462c404
+
+expected_counts:
+  total: 46
+  positive_exact: 5
+  positive_wrong: 15
+  positive_no_prediction: 0
+  negative_emission: 26
+  negative_no_emission: 0
+
+output:
+  final_dir: outputs/reid/full_stage4b/jersey_parseq_false_positive_audit_stage5c_c3e

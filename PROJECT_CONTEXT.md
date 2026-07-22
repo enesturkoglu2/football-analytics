@@ -439,32 +439,65 @@ yüklenmedi):
   expected
   `parseq_epoch=24-step=2575-val_accuracy=95.6044-val_NED=96.3255.ckpt`;
   ~364M; `publicly_accessible_metadata_resolved`;
-  official checksum unavailable; **not downloaded**
+  official checksum unavailable; **not downloaded in C3A**
 - CPU: `cpu_supported_with_small_adapter`
 - Dataset: `dataset_not_required_for_initial_local_smoke`
 - Stop/go: `GO_STAGE5C_C3B_ENV_PLAN`
-- Proposed next env name: `sn-jersey-parseq-cpu` (**not created**)
 - Audit doc: `docs/setup/stage5c-parseq-capability-audit.md`
-- PARSeq is **not** installed or run in this gate
+
+### Stage 5C-C3B / C3C environment + checkpoint (completed)
+
+- Environment: `sn-jersey-parseq-cpu` (isolated; CPU torch 1.13.1)
+- Checkpoint local SHA-256:
+  `14aeb3b13876500e04c93674716a3dae54c2e2d4e06b1abe04758d260d314879`
+- Size: `381608677` bytes; official checksum still unavailable
+- Generic `parseq-bb5792a6.pt` not used as runtime weight
+
+### Stage 5C-C3D offline PARSeq smoke (completed)
+
+- Frozen 46 ROI smoke: exact **5/20**, wrong **15/20**,
+  no-prediction **0/20**; negative emission **26/26**
+- Runtime contract validated; network `pass_loopback_only`
+- Threshold **not** selected; not a deployment accuracy claim
+- Freeze:
+  `outputs/reid/full_stage4b/jersey_parseq_smoke_freeze_stage5c_c3d`
+- Doc: `docs/setup/stage5c-parseq-smoke-results.md`
+
+### Stage 5C-C3E false-positive / confidence audit (completed)
+
+- Read-only analysis of C3D artifacts; no model reload
+- Confidence descriptive ranking present
+  (exact vs negative AUROC ≈0.938)
+- Discovery-set perfect safe point observed; **not** independent
+  validation and **not** a selected threshold
+- `independent_positive_holdout_available=false`
+  (all 20 readable positives used in C3D discovery set)
+- Freeze:
+  `outputs/reid/full_stage4b/jersey_parseq_false_positive_audit_freeze_stage5c_c3e`
+- Doc: `docs/setup/stage5c-parseq-false-positive-audit.md`
 
 ## 8. Aktif kapı ve sıradaki adımlar
 
 Güncel durum:
 
-- **Stage 5C-C2:** `completed_no_exact_signal_in_tested_variants`
-- **Stage 5C-C3A:** `completed_audit_no_install`
-- **Sıradaki kapı:** Stage 5C-C3B — isolated PARSeq CPU environment
+- **Stage 5C-C3D:** `completed_exact_signal_with_negative_emission_risk`
+- **Stage 5C-C3E:**
+  `completed_discovery_set_confidence_signal_not_independently_validated`
+- **Sıradaki kapı:** Stage 5C-C3F-A — independent holdout design
+- DBNet/SAR family closed; jersey OCR **not** abandoned
+- PARSeq remains the primary recognizer candidate
+- Legibility classifier is a future helper-gate candidate
+  (not installed/downloaded here)
+- Stage 5D / 5E / 6 scopes unchanged
 
 Planlanan sıra:
 
-1. Stage 5C-C2 freeze + C3A documentation sync commit (bu kapı)
-2. Stage 5C-C3B isolated `sn-jersey-parseq-cpu` environment
-3. Stage 5C-C3C controlled PARSeq checkpoint acquisition
-4. Stage 5C-C3D offline recognizer-only smoke on frozen 46 crops
-5. Stage 5C-D segment-level OCR aggregation
-6. Stage 5D target gallery/enrollment
-7. Stage 5E evidence fusion
-8. Stage 6 spatial continuity / pitch position
+1. Stage 5C-C3F-A independent holdout design
+2. Later confidence-gate / legibility validation only after holdout design
+3. Stage 5C-D segment-level OCR aggregation
+4. Stage 5D target gallery/enrollment
+5. Stage 5E evidence fusion
+6. Stage 6 spatial continuity / pitch position
 
 ## 9. Cursor için zorunlu kurallar
 
@@ -600,8 +633,9 @@ Sınırlar:
 
 ## 11. Mevcut öncelik
 
-Stage 5C-C2 tamamlandı; genel DBNet/SAR ailesi kapatıldı; sıradaki
-kapı **Stage 5C-C3B isolated PARSeq CPU environment**:
+Stage 5C-C3D/C3E tamamlandı; DBNet/SAR ailesi kapalı; PARSeq primary
+candidate; threshold seçilmedi; sıradaki kapı
+**Stage 5C-C3F-A independent holdout design**:
 
     Video okuma
     → İnsan/oyuncu tespiti (tamamlandı)
@@ -615,7 +649,13 @@ kapı **Stage 5C-C3B isolated PARSeq CPU environment**:
     → Controlled ablation (5C-C2 tamamlandı; no exact signal;
       DBNet/SAR family closed; jersey OCR not abandoned)
     → PARSeq capability audit (5C-C3A tamamlandı; no install)
-    → Isolated PARSeq CPU environment (5C-C3B — sıradaki)
+    → Isolated PARSeq CPU environment (5C-C3B tamamlandı)
+    → Controlled PARSeq checkpoint acquisition (5C-C3C tamamlandı)
+    → Offline PARSeq smoke (5C-C3D tamamlandı; exact 5/20;
+      negative emission 26/26; no threshold)
+    → PARSeq false-positive / confidence audit (5C-C3E tamamlandı;
+      descriptive ranking; no independent positive holdout)
+    → Independent holdout design (5C-C3F-A — sıradaki)
     → Segment aggregation / gallery / fusion (5C-D, 5D, 5E)
     → Spatial continuity (Stage 6)
 

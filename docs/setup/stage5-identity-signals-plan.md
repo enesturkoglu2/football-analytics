@@ -15,8 +15,13 @@
 - **Stage 5C-C2a status:** `review_package_generated_unreviewed`
 - **Stage 5C-C2b status:** `skipped_by_project_decision_not_required_for_c3a`
 - **Stage 5C-C3A status:** `completed_audit_no_install`
-- **Next technical gate:** Stage 5C-C3B isolated PARSeq CPU environment
-  (`next_gate_isolated_parseq_environment`)
+- **Stage 5C-C3B status:** `completed_isolated_parseq_cpu_environment`
+- **Stage 5C-C3C status:** `completed_controlled_checkpoint_acquisition`
+- **Stage 5C-C3D status:** `completed_exact_signal_with_negative_emission_risk`
+- **Stage 5C-C3E status:**
+  `completed_discovery_set_confidence_signal_not_independently_validated`
+- **Next technical gate:** Stage 5C-C3F-A independent holdout design
+  (`Stage_5C_C3F_A_independent_holdout_design`)
 - **Focused target-player gate:** Stage 5D
 - **Pitch-position / GameState:** Stage 6 (separate from Stage 5)
 - **Identity-signals policy:** `configs/reid/identity_signals_stage5.yaml`
@@ -238,9 +243,11 @@ Rules:
 | **5C-C2a** | detector region quality review package | completed (`review_package_generated_unreviewed`) |
 | **5C-C2b** | Furkan detector-region manual review | skipped (`skipped_by_project_decision_not_required_for_c3a`) |
 | **5C-C3A** | SoccerNet fine-tuned PARSeq capability audit | completed (`completed_audit_no_install`) |
-| **5C-C3B** | isolated PARSeq CPU environment | next (`next_gate_isolated_parseq_environment`) |
-| **5C-C3C** | controlled PARSeq checkpoint acquisition | future |
-| **5C-C3D** | offline PARSeq recognizer-only smoke | future |
+| **5C-C3B** | isolated PARSeq CPU environment | completed |
+| **5C-C3C** | controlled PARSeq checkpoint acquisition | completed |
+| **5C-C3D** | offline PARSeq recognizer-only smoke | completed (`completed_exact_signal_with_negative_emission_risk`) |
+| **5C-C3E** | PARSeq false-positive / confidence audit | completed (`completed_discovery_set_confidence_signal_not_independently_validated`) |
+| **5C-C3F-A** | independent holdout design | next |
 | **5C-D** | tracklet-level multi-frame jersey aggregation | pending |
 | **5D** | focused target-player enrollment and gallery design (`target_A` / `target_B` / `non_target` / `unknown`) | pending |
 | **5E** | pair-level auxiliary evidence fusion and manual-review ranking | pending |
@@ -380,7 +387,14 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
 - Stage 5C-C2 status:
   **`completed_no_exact_signal_in_tested_variants`**
 - Stage 5C-C3A status: **`completed_audit_no_install`**
-- Next technical gate: **Stage 5C-C3B isolated PARSeq CPU environment**
+- Stage 5C-C3D status:
+  **`completed_exact_signal_with_negative_emission_risk`**
+- Stage 5C-C3E status:
+  **`completed_discovery_set_confidence_signal_not_independently_validated`**
+- Next technical gate: **Stage 5C-C3F-A independent holdout design**
+- PARSeq remains primary candidate; DBNet/SAR family closed;
+  jersey OCR not abandoned; no threshold selected; Stage 5D/5E/6
+  scopes unchanged
 
 ### Stage 5C-A handoff (completed)
 
@@ -414,9 +428,13 @@ The retained downstream order is:
 - **Stage 5C-C2a / C2b:** region review package generated_unreviewed;
   manual review skipped by project decision;
 - **Stage 5C-C3A (completed):** PARSeq capability audit (no install);
-- **Stage 5C-C3B (next):** isolated PARSeq CPU environment;
-- **Stage 5C-C3C / C3D (future):** controlled checkpoint acquisition
-  and offline recognizer-only smoke;
+- **Stage 5C-C3B/C3C (completed):** isolated env + controlled checkpoint;
+- **Stage 5C-C3D (completed):** offline PARSeq smoke (5/20 exact;
+  26/26 negative emission; no threshold);
+- **Stage 5C-C3E (completed):** confidence false-positive audit
+  (descriptive ranking; no selected threshold; no independent
+  positive holdout remaining);
+- **Stage 5C-C3F-A (next):** independent holdout design;
 - **Stage 5C-D:** tracklet-level multi-frame aggregation;
 - **Stage 5D:** target-player enrollment/gallery memory;
 - **Stage 5E:** evidence fusion and golden evaluation; and
@@ -503,13 +521,30 @@ Stage 5C-C2 completed a controlled recognizer/preprocessing ablation:
 - status: **`completed_audit_no_install`**
 - external repo HEAD `007d54e5530a66616ed5081ca35e0028b36aadb5`
 - SoccerNet fine-tuned PARSeq checkpoint publicly accessible by
-  metadata (~364M); not downloaded; checksum unavailable
+  metadata (~364M); not downloaded in C3A; checksum unavailable
 - CPU: `cpu_supported_with_small_adapter`
 - dataset not required for initial local smoke
 - stop/go: **`GO_STAGE5C_C3B_ENV_PLAN`**
 - audit doc: `docs/setup/stage5c-parseq-capability-audit.md`
-- next gate: **Stage 5C-C3B** isolated PARSeq CPU environment
-  (PARSeq not installed or run in this gate)
+- next gates after C3A were C3B→C3E (now completed)
+
+### Stage 5C-C3D / C3E completion notes
+
+- C3D: offline CPU PARSeq smoke on frozen 46 crops —
+  exact 5/20, wrong 15/20, negative emission 26/26;
+  runtime contract validated; threshold not selected
+- Freeze:
+  `outputs/reid/full_stage4b/jersey_parseq_smoke_freeze_stage5c_c3d`
+- Doc: `docs/setup/stage5c-parseq-smoke-results.md`
+- C3E: read-only confidence/false-positive audit; descriptive
+  ranking signal present; discovery-set perfect safe point is **not**
+  an independent validation result; independent positive holdout
+  unavailable (20/20 readable positives used in C3D)
+- Freeze:
+  `outputs/reid/full_stage4b/jersey_parseq_false_positive_audit_freeze_stage5c_c3e`
+- Doc: `docs/setup/stage5c-parseq-false-positive-audit.md`
+- Next: **Stage 5C-C3F-A independent holdout design**
+- Legibility classifier remains a future helper-gate candidate
 
 ### Stage 5B3 guardrails (retained)
 
