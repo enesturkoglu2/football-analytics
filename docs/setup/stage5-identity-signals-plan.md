@@ -8,8 +8,9 @@
   (completed measurement + visual validation)
 - **Stage 5B3 status:**
   `completed_segmented_reid_regression_baseline`
-- **Next technical gate:** Stage 5C-A — jersey-number
-  visibility/readability measurement baseline (no OCR)
+- **Stage 5C-A status:** `completed_manual_review_pilot_baseline`
+- **Next technical gate:** Stage 5C-B — recognizer/checkpoint
+  capability audit
 - **Focused target-player gate:** Stage 5D
 - **Pitch-position / GameState:** Stage 6 (separate from Stage 5)
 - **Identity-signals policy:** `configs/reid/identity_signals_stage5.yaml`
@@ -346,16 +347,20 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
   mismatch 0 and missing non-conflict candidate 0
 - No threshold, accuracy claim, automatic merge/link/reject/component,
   global-ID rewrite, or team assignment
-- Next technical gate: **Stage 5C-A jersey-number
-  visibility/readability measurement baseline**
+- Stage 5C-A status: **`completed_manual_review_pilot_baseline`**
+- Next technical gate: **Stage 5C-B recognizer/checkpoint capability
+  audit**
 
-### Stage 5C-A handoff (next)
+### Stage 5C-A handoff (completed)
 
-Stage 5C-A is a measurement-only visibility/readability audit:
+Stage 5C-A completed a measurement-only visibility/readability pilot:
 
 - no OCR;
 - no recognizer or checkpoint;
 - no automatic jersey-number assignment;
+- 78/78 selected pilot items reviewed in seven manual batches;
+- 396 non-pilot canonical items remain unreviewed;
+- status is `completed_manual_review_pilot_baseline`;
 - input entity key is `segment_id`;
 - manual segments use segmented crop and assigned-observation
   provenance;
@@ -366,8 +371,8 @@ Stage 5C-A is a measurement-only visibility/readability audit:
 
 The retained downstream order is:
 
-- **Stage 5C-B:** SoccerNet sn-jersey / sn-gamestate jersey capability
-  audit;
+- **Stage 5C-B (next):** SoccerNet sn-jersey / sn-gamestate
+  recognizer/checkpoint capability audit;
 - **Stage 5C-C:** isolated recognizer smoke test;
 - **Stage 5C-D:** tracklet-level multi-frame aggregation;
 - **Stage 5D:** target-player enrollment/gallery memory;
