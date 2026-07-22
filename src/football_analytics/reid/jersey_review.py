@@ -251,6 +251,70 @@ def _mapping(payload: Mapping[str, Any], key: str) -> Mapping[str, Any]:
     return value
 
 
+def _load_declared_sharpness_strata(
+    summary: Mapping[str, Any], *, project_root: Path
+) -> list[str]:
+    source_artifacts = _mapping(summary, "source_artifacts")
+    measurement_config = _mapping(source_artifacts, "config")
+    config_path = Path(
+        _require_str(
+            measurement_config.get("path"),
+            field="measurement summary source_artifacts.config.path",
+        )
+    ).expanduser().resolve()
+    try:
+        config_path.relative_to(project_root)
+    except ValueError as exc:
+        raise JerseyReviewError(
+            f"measurement config escapes project root: {config_path}"
+        ) from exc
+    if not config_path.is_file():
+        raise JerseyReviewError(f"measurement config not found: {config_path}")
+    expected_sha = _require_str(
+        measurement_config.get("sha256"),
+        field="measurement summary source_artifacts.config.sha256",
+    )
+    if not re.fullmatch(r"[0-9a-f]{64}", expected_sha):
+        raise JerseyReviewError("measurement config SHA must be lowercase SHA-256")
+    if sha256_file(config_path) != expected_sha:
+        raise JerseyReviewError("measurement config SHA mismatch")
+    try:
+        measurement_payload = yaml.safe_load(config_path.read_text(encoding="utf-8"))
+    except yaml.YAMLError as exc:
+        raise JerseyReviewError(
+            f"invalid measurement config YAML in {config_path}: {exc}"
+        ) from exc
+    if not isinstance(measurement_payload, Mapping):
+        raise JerseyReviewError("measurement config must be a mapping")
+    ranking = _mapping(measurement_payload, "ranking")
+    boundaries = ranking.get("roi_height_strata_pixels")
+    if (
+        not isinstance(boundaries, Sequence)
+        or isinstance(boundaries, (str, bytes))
+        or len(boundaries) < 2
+    ):
+        raise JerseyReviewError(
+            "measurement ranking.roi_height_strata_pixels "
+            "must contain at least two boundaries"
+        )
+    parsed = [
+        _require_int(
+            boundary,
+            field=f"measurement ranking.roi_height_strata_pixels[{index}]",
+        )
+        for index, boundary in enumerate(boundaries)
+    ]
+    if any(left >= right for left, right in zip(parsed, parsed[1:])):
+        raise JerseyReviewError(
+            "measurement ranking.roi_height_strata_pixels "
+            "must be strictly increasing"
+        )
+    return [
+        f"{lower}_{upper - 1}"
+        for lower, upper in zip(parsed, parsed[1:])
+    ]
+
+
 def validate_jersey_review_config(
     payload: Mapping[str, Any], *, source: str = "<config>"
 ) -> dict[str, Any]:
@@ -546,6 +610,9 @@ def load_measurement_inputs(
     crop_rows = _load_jsonl(root / MEASUREMENT_CROP_SIGNALS_NAME)
     segment_rows = _load_jsonl(root / MEASUREMENT_SEGMENT_SUMMARY_NAME)
     summary = _load_json(root / MEASUREMENT_SUMMARY_NAME)
+    declared_sharpness_strata = _load_declared_sharpness_strata(
+        summary, project_root=project
+    )
 
     input_cfg = config["input"]
     if input_cfg["require_measurement_status_ok"] and summary.get("status") != "ok":
@@ -616,6 +683,12 @@ def load_measurement_inputs(
     by_stratum: dict[str, list[dict[str, Any]]] = defaultdict(list)
     for row in crop_rows:
         by_stratum[str(row["sharpness_size_stratum"])].append(row)
+    undeclared_strata = sorted(set(by_stratum) - set(declared_sharpness_strata))
+    if undeclared_strata:
+        raise JerseyReviewError(
+            "crop signals reference undeclared sharpness strata: "
+            f"{undeclared_strata}"
+        )
     for stratum, rows in by_stratum.items():
         for rank_field in (
             "laplacian_rank_within_size_stratum",
@@ -657,6 +730,7 @@ def load_measurement_inputs(
         "segment_rows": segment_rows,
         "segment_by_id": segment_by_id,
         "summary": summary,
+        "declared_sharpness_strata": declared_sharpness_strata,
         "images": images,
     }
 
@@ -745,6 +819,7 @@ def build_review_groups(
     *,
     items: Sequence[Mapping[str, Any]],
     segment_by_id: Mapping[str, Mapping[str, Any]],
+    declared_sharpness_strata: Sequence[str],
     config: Mapping[str, Any],
 ) -> dict[str, Any]:
     groups_cfg = config["groups"]
@@ -847,19 +922,26 @@ def build_review_groups(
         for item in items:
             by_stratum[str(item["sharpness_size_stratum"])].append(item)
 
-        def stratum_key(name: str) -> tuple[int, int]:
-            low, high = name.split("_", 1)
-            return (int(low), int(high))
-
-        for stratum in sorted(by_stratum, key=stratum_key):
+        undeclared_strata = sorted(set(by_stratum) - set(declared_sharpness_strata))
+        if undeclared_strata:
+            raise JerseyReviewError(
+                "review items reference undeclared sharpness strata: "
+                f"{undeclared_strata}"
+            )
+        for stratum in declared_sharpness_strata:
             stratum_items = by_stratum[stratum]
+            if not stratum_items:
+                empty_strata.append(stratum)
             for suffix, rank_field, metric_name, reverse in SHARPNESS_VARIANTS:
                 count = int(sharp_cfg[f"{suffix}_count"])
                 selected = ordered_by_rank(
                     stratum_items, rank_field, reverse=reverse, count=count
                 )
                 notes = []
-                if len(selected) < count:
+                empty_reason = None
+                if not stratum_items:
+                    empty_reason = "no_crop_signals_in_declared_stratum"
+                elif len(selected) < count:
                     notes.append(
                         f"requested {count} but only {len(selected)} available"
                     )
@@ -870,6 +952,7 @@ def build_review_groups(
                     metric_name=metric_name,
                     rank_source=rank_field,
                     stratum=stratum,
+                    empty_reason=empty_reason,
                     notes=notes,
                 )
 
@@ -1270,6 +1353,7 @@ def run_build_jersey_review_panels(
     grouping = build_review_groups(
         items=items,
         segment_by_id=inputs["segment_by_id"],
+        declared_sharpness_strata=inputs["declared_sharpness_strata"],
         config=validated_config,
     )
     groups = grouping["groups"]
@@ -1421,6 +1505,7 @@ def run_build_jersey_review_panels(
             },
             "groups": group_summaries,
             "critical_no_crop_segments": grouping["critical_no_crop_segments"],
+            "empty_strata": grouping["empty_strata"],
             "panel_geometry": {
                 "columns": columns,
                 "rows": rows,

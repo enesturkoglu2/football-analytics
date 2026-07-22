@@ -74,6 +74,7 @@ class SyntheticReviewFixture:
         self.root = root
         self.project = root / "project"
         self.measurement = self.project / "measurement"
+        self.measurement_config_path = self.project / "measurement_config.yaml"
         self.output = root / "review_output"
         self.config_path = root / "review_config.yaml"
         self.measurement.mkdir(parents=True)
@@ -206,6 +207,12 @@ class SyntheticReviewFixture:
                 for sid, track, kind, status, count in segments
             ],
         )
+        self.measurement_config_path.write_text(
+            yaml.safe_dump(
+                {"ranking": {"roi_height_strata_pixels": [24, 40, 64]}}
+            ),
+            encoding="utf-8",
+        )
         (self.measurement / "jersey_visibility_summary.json").write_text(
             json.dumps(
                 {
@@ -215,11 +222,33 @@ class SyntheticReviewFixture:
                     "total_derived_segment_count": 4,
                     "measured_segment_count": 3,
                     "no_selected_crop_segment_count": 1,
+                    "source_artifacts": {
+                        "config": {
+                            "path": str(self.measurement_config_path),
+                            "sha256": _sha256(self.measurement_config_path),
+                        }
+                    },
                 },
                 allow_nan=False,
             )
             + "\n",
             encoding="utf-8",
+        )
+
+    def set_declared_strata(self, boundaries: list[int]) -> None:
+        self.measurement_config_path.write_text(
+            yaml.safe_dump(
+                {"ranking": {"roi_height_strata_pixels": boundaries}}
+            ),
+            encoding="utf-8",
+        )
+        summary_path = self.measurement / "jersey_visibility_summary.json"
+        summary = json.loads(summary_path.read_text(encoding="utf-8"))
+        summary["source_artifacts"]["config"]["sha256"] = _sha256(
+            self.measurement_config_path
+        )
+        summary_path.write_text(
+            json.dumps(summary, allow_nan=False) + "\n", encoding="utf-8"
         )
 
     def config_payload(self) -> dict:
@@ -608,6 +637,155 @@ class ReviewItemAndGroupTests(unittest.TestCase):
             self.fixture.run(output=self.fixture.root / "other_output")
 
 
+class EmptySharpnessStratumTests(unittest.TestCase):
+    def setUp(self) -> None:
+        self.temp = tempfile.TemporaryDirectory()
+        self.fixture = SyntheticReviewFixture(Path(self.temp.name))
+        self.fixture.set_declared_strata([0, 24, 40, 64])
+        self.result = self.fixture.run()
+        self.summary = json.loads(
+            (self.fixture.output / SUMMARY_NAME).read_text(encoding="utf-8")
+        )
+        self.memberships = _load_jsonl(
+            self.fixture.output / GROUP_MEMBERSHIPS_NAME
+        )
+        self.panel_index = _load_jsonl(self.fixture.output / PANEL_INDEX_NAME)
+
+    def tearDown(self) -> None:
+        self.temp.cleanup()
+
+    def _empty_groups(self) -> list[dict]:
+        return [
+            group
+            for group in self.summary["groups"]
+            if group["sharpness_size_stratum"] == "0_23"
+        ]
+
+    def test_declared_unobserved_stratum_has_four_explicit_groups(self) -> None:
+        groups = self._empty_groups()
+        self.assertEqual(
+            [group["group_name"] for group in groups],
+            [
+                "sharpness_0_23_laplacian_top",
+                "sharpness_0_23_laplacian_bottom",
+                "sharpness_0_23_tenengrad_top",
+                "sharpness_0_23_tenengrad_bottom",
+            ],
+        )
+        self.assertEqual(
+            [group["group_order"] for group in groups],
+            list(range(groups[0]["group_order"], groups[0]["group_order"] + 4)),
+        )
+        expected_requested = [3, 2, 2, 2]
+        for group, requested in zip(groups, expected_requested):
+            self.assertEqual(group["requested_count"], requested)
+            self.assertEqual(group["actual_count"], 0)
+            self.assertEqual(group["panel_page_count"], 0)
+            self.assertEqual(group["duplicate_item_count_within_group"], 0)
+            self.assertEqual(
+                group["empty_reason"],
+                "no_crop_signals_in_declared_stratum",
+            )
+            self.assertEqual(group["notes"], [])
+            self.assertIsNotNone(group["metric_name"])
+            self.assertIsNotNone(group["rank_source"])
+
+    def test_empty_groups_emit_no_membership_panel_index_or_png(self) -> None:
+        empty_names = {group["group_name"] for group in self._empty_groups()}
+        self.assertFalse(
+            [row for row in self.memberships if row["group_name"] in empty_names]
+        )
+        self.assertFalse(
+            [row for row in self.panel_index if row["group_name"] in empty_names]
+        )
+        for name in empty_names:
+            self.assertFalse(
+                (self.fixture.output / PANELS_DIRNAME / name).exists()
+            )
+        self.assertFalse(
+            list(
+                (self.fixture.output / PANELS_DIRNAME).glob(
+                    "sharpness_0_23_*"
+                )
+            )
+        )
+
+    def test_global_counts_include_empty_groups_only_where_applicable(self) -> None:
+        counts = self.summary["counts"]
+        self.assertEqual(counts["group_count"], 23)
+        self.assertEqual(counts["empty_group_count"], 4)
+        self.assertEqual(self.summary["empty_strata"], ["0_23"])
+        # Empty groups add no pages, PNGs, memberships, or canonical items.
+        self.assertEqual(counts["total_panel_page_count"], 20)
+        self.assertEqual(counts["total_panel_png_count"], 20)
+        self.assertEqual(counts["canonical_review_item_count"], 5)
+        self.assertEqual(counts["group_membership_count"], len(self.memberships))
+        self.assertEqual(
+            sorted(path.name for path in self.fixture.output.iterdir()),
+            sorted(list(OUTPUT_NAMES) + [PANELS_DIRNAME]),
+        )
+
+    def test_declared_order_is_deterministic_and_observed_selection_unchanged(self) -> None:
+        group_names = [group["group_name"] for group in self.summary["groups"]]
+        sharpness_names = [
+            name for name in group_names if name.startswith("sharpness_")
+        ]
+        self.assertEqual(
+            sharpness_names[:4],
+            [
+                "sharpness_0_23_laplacian_top",
+                "sharpness_0_23_laplacian_bottom",
+                "sharpness_0_23_tenengrad_top",
+                "sharpness_0_23_tenengrad_bottom",
+            ],
+        )
+        observed_rows = sorted(
+            (
+                row
+                for row in self.memberships
+                if row["group_name"] == "sharpness_40_63_laplacian_top"
+            ),
+            key=lambda row: row["group_item_rank"],
+        )
+        self.assertEqual(
+            [row["crop_id"] for row in observed_rows],
+            [
+                "track_1_frame_10_rank_1",
+                "track_1_frame_20_rank_2",
+                "track_2_frame_5_rank_1",
+            ],
+        )
+        second_output = self.fixture.root / "second_output"
+        self.fixture.run(output=second_output)
+        second_summary = json.loads(
+            (second_output / SUMMARY_NAME).read_text(encoding="utf-8")
+        )
+        self.assertEqual(
+            [
+                (group["group_name"], group["group_order"])
+                for group in self.summary["groups"]
+            ],
+            [
+                (group["group_name"], group["group_order"])
+                for group in second_summary["groups"]
+            ],
+        )
+
+    def test_observed_undeclared_stratum_is_rejected_without_output(self) -> None:
+        other_output = self.fixture.root / "undeclared_output"
+        self.fixture.set_declared_strata([40, 64])
+        with self.assertRaises(JerseyReviewError) as ctx:
+            self.fixture.run(output=other_output)
+        self.assertIn("undeclared sharpness strata", str(ctx.exception))
+        self.assertFalse(other_output.exists())
+        self.assertFalse(
+            list(self.fixture.root.glob("_tmp_reid_jersey_review_*"))
+        )
+        self.assertFalse(
+            list(self.fixture.root.glob("_backup_reid_jersey_review_*"))
+        )
+
+
 class RenderingTests(unittest.TestCase):
     def setUp(self) -> None:
         self.temp = tempfile.TemporaryDirectory()
@@ -630,6 +808,8 @@ class RenderingTests(unittest.TestCase):
         # groups + critical 1, each single page.
         self.assertEqual(len(self.panel_index), 20)
         self.assertEqual(self.summary["counts"]["group_count"], 19)
+        self.assertEqual(self.summary["counts"]["empty_group_count"], 0)
+        self.assertEqual(self.summary["empty_strata"], [])
         self.assertEqual(self.summary["counts"]["total_panel_page_count"], 20)
         self.assertEqual(self.summary["counts"]["total_panel_png_count"], 20)
         pngs = sorted(
