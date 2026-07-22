@@ -1,0 +1,74 @@
+schema_version: reid_jersey_manual_review_config_v1
+stage_status: implementation_manual_annotation_protocol
+
+input:
+  require_review_summary_status_ok: true
+  require_review_item_schema: reid_jersey_review_item_v1
+  require_exact_template_identity: true
+  allow_missing_review_rows: false
+  allow_extra_review_rows: false
+  allow_duplicate_review_items: false
+  require_source_review_item_match: true
+
+review_state:
+  blank_row_means: unreviewed
+  uncertain_is_explicit_decision: true
+  reviewed_row_requires_reviewer: true
+  reviewed_row_requires_reviewed_at: true
+
+allowed_values:
+  manual_crop_valid:
+    - valid
+    - invalid
+    - uncertain
+  manual_back_facing:
+    - "yes"
+    - "no"
+    - uncertain
+  manual_number_visible:
+    - "yes"
+    - "no"
+    - uncertain
+  manual_number_readable:
+    - "yes"
+    - "no"
+    - uncertain
+  manual_digit_count:
+    - "0"
+    - "1"
+    - "2"
+    - uncertain
+  manual_contamination_affects_number_region:
+    - "yes"
+    - "no"
+    - uncertain
+
+jersey_number:
+  storage_type: string
+  allow_one_digit: true
+  allow_two_digits: true
+  preserve_leading_zero: true
+  allow_non_digit_characters: false
+  allow_more_than_two_digits: false
+  blank_when_not_readable: true
+
+timestamp:
+  format: iso8601
+  timezone_required: true
+
+validation:
+  allow_partial_dataset_review: true
+  unreviewed_rows_allowed: true
+  reject_partially_filled_reviewed_rows: true
+  reject_identity_labels: true
+  reject_automatic_predictions: true
+
+safety:
+  review_items_immutable: true
+  panels_immutable: true
+  source_crops_immutable: true
+  annotation_does_not_update_gallery: true
+  annotation_does_not_assign_identity: true
+  annotation_does_not_assign_team: true
+  identity_ground_truth_available: false
+  accuracy_claim_allowed: false
