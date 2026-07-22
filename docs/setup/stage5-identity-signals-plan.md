@@ -10,8 +10,10 @@
   `completed_segmented_reid_regression_baseline`
 - **Stage 5C-A status:** `completed_manual_review_pilot_baseline`
 - **Stage 5C-B status:** `completed_environment_and_assets_not_loaded`
-- **Next technical gate:** Stage 5C-C — offline CPU crop smoke
-  (`next_gate_offline_cpu_crop_smoke`)
+- **Stage 5C-C1 status:** `completed_offline_smoke_low_signal_baseline`
+- **Next technical gate:** Stage 5C-C2 controlled
+  recognizer/preprocessing ablation
+  (`next_gate_controlled_recognizer_preprocessing_ablation`)
 - **Focused target-player gate:** Stage 5D
 - **Pitch-position / GameState:** Stage 6 (separate from Stage 5)
 - **Identity-signals policy:** `configs/reid/identity_signals_stage5.yaml`
@@ -228,7 +230,8 @@ Rules:
 | **5B3G-B** | real segmented OSNet regression | completed |
 | **5C-A** | jersey-number visibility/readability measurement baseline — **no OCR** | completed |
 | **5C-B** | jersey recognizer capability audit, isolated environment, and DBNet/SAR asset acquisition | completed (assets not loaded) |
-| **5C-C** | isolated jersey recognizer smoke test (offline CPU crop smoke) | next |
+| **5C-C1** | offline CPU DBNet+SAR baseline smoke on 46 crops | completed (`completed_offline_smoke_low_signal_baseline`) |
+| **5C-C2** | controlled recognizer/preprocessing ablation | next |
 | **5C-D** | tracklet-level multi-frame jersey aggregation | pending |
 | **5D** | focused target-player enrollment and gallery design (`target_A` / `target_B` / `non_target` / `unknown`) | pending |
 | **5E** | pair-level auxiliary evidence fusion and manual-review ranking | pending |
@@ -272,8 +275,10 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
 - **5C-B** recognizer capability audit + isolated environment +
   DBNet/SAR asset acquisition — completed
   (`completed_environment_and_assets_not_loaded`)
-- **5C-C–5C-D** offline CPU crop smoke and tracklet-level multi-frame
-  aggregation
+- **5C-C1** offline CPU DBNet+SAR baseline smoke — completed
+  (`completed_offline_smoke_low_signal_baseline`)
+- **5C-C2** controlled recognizer/preprocessing ablation — next
+- **5C-D** tracklet-level multi-frame aggregation — pending
 - **5D** focused target-player enrollment / gallery
 - **5E** pair-level fusion + manual-review ranking
 - **6A–6D** pitch-position / GameState adapter path and multi-match eval
@@ -355,7 +360,10 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
 - Stage 5C-A status: **`completed_manual_review_pilot_baseline`**
 - Stage 5C-B status:
   **`completed_environment_and_assets_not_loaded`**
-- Next technical gate: **Stage 5C-C offline CPU crop smoke**
+- Stage 5C-C1 status:
+  **`completed_offline_smoke_low_signal_baseline`**
+- Next technical gate: **Stage 5C-C2 controlled
+  recognizer/preprocessing ablation**
 
 ### Stage 5C-A handoff (completed)
 
@@ -379,8 +387,13 @@ The retained downstream order is:
 
 - **Stage 5C-B (completed):** recognizer capability audit, isolated
   environment setup, and controlled DBNet/SAR asset acquisition;
-- **Stage 5C-C (next):** isolated recognizer smoke test (offline CPU
-  crop smoke);
+- **Stage 5C-C1 (completed):** offline CPU DBNet+SAR baseline smoke
+  (`completed_offline_smoke_low_signal_baseline`); pipeline
+  successful, detector low-signal on current ROI; not a general
+  accuracy benchmark;
+- **Stage 5C-C2 (next):** controlled recognizer/preprocessing
+  ablation (`next_gate_controlled_recognizer_preprocessing_ablation`);
+  not started in this gate;
 - **Stage 5C-D:** tracklet-level multi-frame aggregation;
 - **Stage 5D:** target-player enrollment/gallery memory;
 - **Stage 5E:** evidence fusion and golden evaluation; and
@@ -420,6 +433,28 @@ Frozen selections and facts:
   kept for local research smoke only and are not committed to Git
 - Asset details (paths, sizes, SHA-256, manifests):
   `PROJECT_CONTEXT.md` section 10.2
+
+### Stage 5C-C1 completion notes
+
+Stage 5C-C1 completed an offline CPU DBNet+SAR baseline smoke:
+
+- status: **`completed_offline_smoke_low_signal_baseline`**
+- pipeline: successful (46/46 inference, `inference_error=0`,
+  `pass_loopback_only`)
+- model signal: detector low-signal on current number-search ROI
+  (exact match 0/20; detector no-region 45; recognizer no-digit 1;
+  negative emission 0/26)
+- corrected taxonomy: POS/A/B/C/D/E = 20/10/2/7/2/5
+- Stage 5A ROI reuse; median ROI ≈ 38×65 px; no threshold /
+  preprocessing / upscaling / direct-recognizer experiment
+- provenance audit (5C-C1a): `REPORT_TEXT_ONLY_TYPO`; critical item
+  `review_track_514_frame_496_rank_3` manual jersey = **30**
+- freeze:
+  `outputs/reid/full_stage4b/jersey_mmocr_smoke_baseline_freeze_stage5c_c1`
+- detailed results:
+  `docs/setup/stage5c-jersey-mmocr-baseline-results.md`
+- next gate: **Stage 5C-C2** controlled recognizer/preprocessing
+  ablation (not started)
 
 ### Stage 5B3 guardrails (retained)
 

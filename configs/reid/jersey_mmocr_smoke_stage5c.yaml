@@ -1,0 +1,59 @@
+# Stage 5C-C1 offline CPU jersey OCR smoke configuration (DBNet + SAR, local assets only).
+# No threshold tuning, no preprocessing tuning, no image export, no source overwrite.
+schema_version: reid_jersey_mmocr_smoke_config_v1
+stage: 5C-C1
+device: cpu
+max_items: 46
+offline_required: true
+preprocessing_variant: roi_bgr_no_preprocessing
+roi_source: stage5a_number_search_roi
+
+inputs:
+  pilot_reviewed_items: outputs/reid/full_stage4b/jersey_pilot_results_stage5c/pilot_reviewed_items.jsonl
+  pilot_reviewed_items_sha256: 1ff03783649d3890f748b12c44d798731fdc41d96c6a005a9f4dc3b0e93c4eca
+  canonical_review_items: outputs/reid/full_stage4b/jersey_review_stage5c/jersey_review_items.jsonl
+  canonical_review_items_sha256: f4487f18d06652931636738f6cd1d8a336d87736261cd729d5aeddc288b7662d
+
+asset_root: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr
+asset_manifest_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr/manifests/asset_manifest.json
+asset_manifest_sha256: 5b238ea7e83ed23a274329b2e811b3d26d319def8ba3b1a4434e46adfc4f62c2
+config_closure_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr/manifests/config_closure.json
+config_closure_sha256: fd29e4d262e80bce242274fe83ee19cc4e4ee0e6c021e60d9a67856b8f63d743
+
+detector:
+  model_id: dbnet_resnet18_fpnc_1200e_icdar2015
+  config_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr/configs/mmocr-v1.0.1/configs/textdet/dbnet/dbnet_resnet18_fpnc_1200e_icdar2015.py
+  config_sha256: c5adca881e5a38212bb1335ef447f35df171863714e981bdd7551dad15edf874
+  checkpoint_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr/dbnet/dbnet_resnet18_fpnc_1200e_icdar2015_20220825_221614-7c0e94f2.pth
+  checkpoint_sha256: 7c0e94f2f52e014fa423f489e059640e10f765f3c34f38b80454d7b850174cfb
+  checkpoint_byte_size: 59068395
+
+recognizer:
+  model_id: sar_resnet31_parallel-decoder_5e_st-sub_mj-sub_sa_real
+  config_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr/configs/mmocr-v1.0.1/configs/textrecog/sar/sar_resnet31_parallel-decoder_5e_st-sub_mj-sub_sa_real.py
+  config_sha256: 3df00bd316cfc5f1507d4dff2dc2306087423bbccb343d749f21797470669188
+  checkpoint_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-mmocr/sar/sar_resnet31_parallel-decoder_5e_st-sub_mj-sub_sa_real_20220915_171910-04eb4e75.pth
+  checkpoint_sha256: 04eb4e75467fc951e9b189a273216dd2428d30f7d913368155ab5c69bbeb843c
+  checkpoint_byte_size: 231195256
+
+digit_policy:
+  pattern: "^[0-9]{1,2}$"
+  max_digits: 2
+  letter_to_digit_conversion: false
+  confidence_threshold: null
+
+# Corrected Stage 5C-C1 selection taxonomy (mutually exclusive classes).
+selection:
+  expected_counts:
+    POS_readable: 20
+    A_not_visible: 10
+    B_visible_unreadable: 2
+    C_uncertain_signal: 7
+    D_uncertain_crop: 2
+    E_invalid: 5
+  a_not_visible_max_per_segment: 1
+
+output:
+  final_dir: outputs/reid/full_stage4b/jersey_mmocr_smoke_stage5c
+  image_export: false
+  source_overwrite: false

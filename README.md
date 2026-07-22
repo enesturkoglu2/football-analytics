@@ -46,19 +46,22 @@ Tamamlananlar:
 - [x] DBNet/SAR capability audit (Stage 5C-B1/B2)
 - [x] İzole MMOCR CPU environment kurulumu (Stage 5C-B4)
 - [x] Kontrollü DBNet/SAR asset acquisition (Stage 5C-B5)
+- [x] Offline CPU DBNet+SAR baseline smoke (Stage 5C-C1)
 
 Henüz yapılmayanlar:
 
-- [ ] DBNet/SAR model init
-- [ ] Gerçek crop inference (jersey OCR smoke)
+- [ ] Controlled recognizer/preprocessing ablation (Stage 5C-C2)
 - [ ] Confidence threshold seçimi
 - [ ] Segment-level OCR aggregation (Stage 5C-D)
 - [ ] Target enrollment / gallery memory (Stage 5D)
 - [ ] Evidence fusion evaluation (Stage 5E)
 - [ ] Spatial continuity / pitch position (Stage 6)
 
-DBNet/SAR checkpoint'leri yerel olarak edinildi fakat henüz
-çalıştırılmadı; doğruluğu kanıtlanmış model olarak kabul edilmez.
+Stage 5C-C1: pipeline başarılı (46/46, `inference_error=0`,
+`pass_loopback_only`); mevcut düşük çözünürlüklü number-search ROI
+üzerinde DBNet low-signal (readable exact match 0/20). Bu sayı genel
+accuracy benchmark değildir. Sıradaki adım controlled C2 ablation.
+DBNet/SAR asset'leri Git'e commit edilmez.
 
 ## Geliştirme ortamları
 
@@ -83,6 +86,8 @@ Aktivasyon:
   — Stage 5 identity-signals planı ve kapı durumları
 - [docs/setup/stage5c-jersey-pilot-results.md](docs/setup/stage5c-jersey-pilot-results.md)
   — 78-item manuel jersey pilot sonuçları
+- [docs/setup/stage5c-jersey-mmocr-baseline-results.md](docs/setup/stage5c-jersey-mmocr-baseline-results.md)
+  — Stage 5C-C1 offline DBNet+SAR baseline smoke sonuçları
 - [docs/setup/reid-stage4b-completion.md](docs/setup/reid-stage4b-completion.md)
   — Stage 4B ReID baseline kapanış raporu
 

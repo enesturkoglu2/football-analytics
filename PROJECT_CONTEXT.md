@@ -50,7 +50,7 @@ Python yolu:
 - Python 3.10.20
 - torch 2.13.0+cpu
 - Ana video/detection/tracking/ReID geliştirme ortamı
-- Mevcut test suite (342 test) bu ortamda çalışır
+- Mevcut test suite (398 test) bu ortamda çalışır
 
 Ortam izolasyonu:
 
@@ -141,12 +141,14 @@ Ana dal:
 
     94daa9e Create project foundation and record environment
 
-Güncel durum (Stage 5C-B5 sonrası, dokümantasyon senkronizasyonu
-öncesi):
+Güncel durum (Stage 5C-C1 freeze / documentation sync öncesi):
 
-- current HEAD: `995893c` — Document jersey review pilot results
+- source baseline HEAD: `d35b239` — Update project context for jersey OCR smoke
+- documentation commit: pending/current commit (hash after push;
+  reported in the final gate report)
 - `main == origin/main`
-- working tree başlangıçta clean
+- working tree initially contained the four Stage 5C-C1 application
+  files plus documentation updates from this gate
 - sistem CPU-only'dir
 
 ## 6. Proje klasörleri
@@ -364,31 +366,51 @@ yüklenmedi):
   edilmedi
 - Status: `completed_environment_and_assets_not_loaded`
 
+### Stage 5C-C1 offline baseline smoke (completed)
+
+- Status: `completed_offline_smoke_low_signal_baseline`
+- Pipeline: successful (46/46, `inference_error=0`,
+  network `pass_loopback_only`)
+- Selection: POS/A/B/C/D/E = 20/10/2/7/2/5
+- Positive exact match: 0/20 (smoke-set only; not a general accuracy
+  benchmark)
+- Detector no-region: 45; recognizer no-digit: 1; negative number
+  emission: 0/26
+- DBNet init ≈ 4736 ms; SAR init ≈ 1135 ms; peak RSS ≈ 1.5 GB
+- Stage 5A number-search ROI reuse (median ROI ≈ 38×65 px)
+- Provenance audit: `REPORT_TEXT_ONLY_TYPO`;
+  `review_track_514_frame_496_rank_3` → manual jersey **30**
+- Smoke root:
+  `outputs/reid/full_stage4b/jersey_mmocr_smoke_stage5c`
+- Baseline freeze:
+  `outputs/reid/full_stage4b/jersey_mmocr_smoke_baseline_freeze_stage5c_c1`
+- Application files:
+  `src/football_analytics/reid/jersey_mmocr.py`,
+  `scripts/run_reid_jersey_mmocr_smoke.py`,
+  `configs/reid/jersey_mmocr_smoke_stage5c.yaml`,
+  `tests/test_reid_jersey_mmocr.py`
+- Results doc:
+  `docs/setup/stage5c-jersey-mmocr-baseline-results.md`
+- Technical finding: DBNet detector is the observed bottleneck on the
+  current low-resolution number-search ROI baseline
+- C2 not started
+
 ## 8. Aktif kapı ve sıradaki adımlar
 
 Güncel durum:
 
-- **Stage 5C-B5:** `completed_assets_acquired_not_loaded`
-- **Sıradaki kapı:** Stage 5C-C — offline CPU crop smoke
-
-Stage 5C-C tasarımı (henüz uygulanmadı):
-
-- Ağ kapalı; yalnız local DBNet/SAR config/checkpoint
-- CPU model init (ilk kez bu kapıda)
-- Deterministic 46 crop: 20 readable positive + 6 visible/unreadable +
-  10 number-not-visible + 5 uncertain + 5 invalid
-- Exact match + false positive + rejection ölçümleri
-- Identity/gallery/global-ID değişikliği yok
+- **Stage 5C-C1:** `completed_offline_smoke_low_signal_baseline`
+- **Sıradaki kapı:** Stage 5C-C2 — controlled recognizer/preprocessing
+  ablation
 
 Planlanan sıra:
 
-1. Documentation sync commit (bu kapı)
-2. Stage 5C-C smoke implementation/design gate
-3. Offline model init ve 46-crop testi
-4. Stage 5C-D segment-level OCR aggregation
-5. Stage 5D target gallery/enrollment
-6. Stage 5E evidence fusion
-7. Stage 6 spatial continuity / pitch position
+1. Stage 5C-C1 freeze + documentation sync commit (bu kapı)
+2. Stage 5C-C2 controlled recognizer/preprocessing ablation
+3. Stage 5C-D segment-level OCR aggregation
+4. Stage 5D target gallery/enrollment
+5. Stage 5E evidence fusion
+6. Stage 6 spatial continuity / pitch position
 
 ## 9. Cursor için zorunlu kurallar
 
@@ -487,10 +509,13 @@ Manifestler:
 
 Safety durumu:
 
-- assets acquired (`status=assets_acquired_not_loaded`)
-- checkpoint loaded = false
-- model initialized = false
-- inference performed = false
+- assets acquired and loaded for Stage 5C-C1 offline smoke only
+- checkpoint loaded = true (local-path-only; no download)
+- model initialized = true (CPU; DBNet + SAR)
+- inference performed = true (46 crops; blind)
+- baseline freeze status = `completed_offline_smoke_low_signal_baseline`
+- dataset downloaded = false
+- model fine-tuned = false
 
 Lisans sınırı: framework Apache-2.0; checkpoint
 redistribution/commercial durumu doğrulanmamıştır. Asset'ler yalnız
@@ -514,14 +539,15 @@ Sınırlar:
 Önemli purity/mixed-target bulguları:
 
 - `raw_231` split 9/17 (iki segment farklı forma numarası gösterir)
-- `raw_514` purity warning
+- `raw_514` purity warning; frame 496 readable jersey observation = **30**
+  (Stage 5C-C1a provenance audit: `REPORT_TEXT_ONLY_TYPO`)
 - `raw_16` / `raw_13` invalid off-pitch crop kaynağı
 - `raw_738` mixed target
 
 ## 11. Mevcut öncelik
 
-Stage 5C-B5 tamamlandı; sıradaki kapı **Stage 5C-C offline CPU crop
-smoke**:
+Stage 5C-C1 tamamlandı; sıradaki kapı **Stage 5C-C2 controlled
+recognizer/preprocessing ablation**:
 
     Video okuma
     → İnsan/oyuncu tespiti (tamamlandı)
@@ -531,11 +557,13 @@ smoke**:
     → Crop quality / kit / purity / segmentation (5A-5B tamamlandı)
     → Jersey visibility + 78-item manuel pilot (5C-A tamamlandı)
     → MMOCR environment + DBNet/SAR asset (5C-B tamamlandı)
-    → Offline CPU jersey OCR smoke (5C-C — sıradaki, ayrı onay)
+    → Offline CPU jersey OCR baseline smoke (5C-C1 tamamlandı;
+      pipeline başarılı, current ROI üzerinde DBNet low-signal)
+    → Controlled recognizer/preprocessing ablation (5C-C2 — sıradaki)
     → Segment aggregation / gallery / fusion (5C-D, 5D, 5E)
     → Spatial continuity (Stage 6)
 
-## 12. Jersey OCR güvenlik kısıtları (Stage 5C-C öncesi)
+## 12. Jersey OCR güvenlik kısıtları (Stage 5C-C sonrası da geçerli)
 
 - Checkpoint/model asset'leri Git'e commit edilmez.
 - MMOCR model alias'ı ile otomatik download yapılmaz; yalnız local
