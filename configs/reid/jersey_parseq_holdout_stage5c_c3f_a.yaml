@@ -1,0 +1,102 @@
+# Stage 5C-C3F-A label-blind / PARSeq-blind independent holdout design.
+# No model load, inference, threshold deployment selection, or label fill.
+schema_version: reid_jersey_parseq_holdout_config_v1
+stage: 5C-C3F-A
+offline_required: true
+threshold_selection_forbidden: true
+label_blind: true
+parseq_blind: true
+
+inputs:
+  canonical_review_items:
+    path: outputs/reid/full_stage4b/jersey_review_stage5c/jersey_review_items.jsonl
+    sha256: f4487f18d06652931636738f6cd1d8a336d87736261cd729d5aeddc288b7662d
+    expected_rows: 474
+  pilot_reviewed_items:
+    path: outputs/reid/full_stage4b/jersey_pilot_results_stage5c/pilot_reviewed_items.jsonl
+    sha256: 1ff03783649d3890f748b12c44d798731fdc41d96c6a005a9f4dc3b0e93c4eca
+    expected_rows: 78
+  visibility_crop_signals:
+    path: outputs/reid/full_stage4b/jersey_visibility_stage5c/jersey_visibility_crop_signals.jsonl
+    sha256: 7fcfed97a39cf0d3e52f1dca52fc353af3b8afbed42c6821422d03ac70c6fcd7
+    expected_rows: 474
+  discovery_inference_manifest:
+    path: outputs/reid/full_stage4b/jersey_parseq_smoke_freeze_stage5c_c3d/parseq_inference_manifest.jsonl
+    sha256: f6d8ffa9c8b1c00d8861a73337288e4de9ebf0610f947f3b1d920f94dc2abf39
+    expected_rows: 46
+  c3e_operating_points:
+    path: outputs/reid/full_stage4b/jersey_parseq_false_positive_audit_freeze_stage5c_c3e/parseq_confidence_operating_points.jsonl
+    sha256: 670f7c2224e4a37f59051926882585018d3125295342cc3ac1665bdf1f196313
+    expected_rows: 48
+  kit_descriptors:
+    path: outputs/reid/full_stage4b/kit_stage5b/crop_kit_descriptors.jsonl
+    sha256: 32b0324cb595ba798b5cbc5a11027a49b6ea61ad584bc08be8588234cfac2f99
+    expected_rows: 454
+
+expected_universe:
+  canonical: 474
+  reviewed_pilot: 78
+  unreviewed: 396
+  discovery: 46
+
+ranking:
+  # Lower one-based rank is better; inverted to unit score then averaged.
+  fields:
+    - roi_height_global_rank
+    - local_contrast_global_rank
+    - contamination_low_global_rank
+    - laplacian_rank_within_size_stratum
+    - roi_area_global_rank
+    - entropy_global_rank
+  forbidden_prefixes:
+    - manual_
+  forbidden_substrings:
+    - parseq
+    - mmocr
+    - prediction
+    - sequence_confidence
+    - accepted_prediction
+    - exact_match
+    - wrong_number
+
+near_duplicate:
+  algorithm: average_hash_8x8_grayscale_inter_area
+  hash_size: 8
+  resize_interpolation: INTER_AREA
+  max_hamming_distance: 5
+
+diversity:
+  max_per_segment: 1
+  max_per_raw_track: 2
+  min_frame_gap_same_raw_track: 60
+  tie_break: review_item_id_ascending
+
+selection:
+  combined_quotas:
+    high_signal_candidate: 48
+    mid_signal_candidate: 24
+    safety_candidate: 24
+  primary_quotas:
+    high_signal_candidate: 32
+    mid_signal_candidate: 16
+    safety_candidate: 16
+  reserve_quotas:
+    high_signal_candidate: 16
+    mid_signal_candidate: 8
+    safety_candidate: 8
+  contact_sheet_max_items: 16
+
+annotation_minimums:
+  readable_positive: 12
+  negative_or_safety: 24
+
+preregistration:
+  validation_candidate_cut_rule: lowest_confidence_cut_among_exact_gt0_wrong_eq0_neg_eq0_sentinel_null
+  deployment_threshold_selected: false
+  threshold_selected_for_production: false
+  next_evaluation_gate: Stage_5C_C3F_C_blind_holdout_inference
+  next_annotation_gate: Stage_5C_C3F_B_holdout_annotation_freeze
+
+output:
+  final_dir: outputs/reid/full_stage4b/jersey_parseq_holdout_design_stage5c_c3f_a
+  network_policy: pass_offline_holdout_design_only

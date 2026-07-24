@@ -141,15 +141,16 @@ Ana dal:
 
     94daa9e Create project foundation and record environment
 
-Güncel durum (Stage 5C-C2 freeze / C3A documentation sync öncesi):
+Güncel durum (REBUILD-R4D freeze / documentation commit):
 
-- source baseline HEAD: `8c4324d` — Add offline jersey MMOCR baseline smoke
-- documentation/application commit: pending/current commit (hash after
-  push; reported in the final gate report)
-- `main == origin/main`
-- working tree initially contained the four Stage 5C-C2 application
-  files plus documentation updates from this gate
+- pre-commit HEAD: `b386f07c96782bcb595fbd7dd2fdfd696e491003`
+- documentation/application commit: this REBUILD-R4D commit
+  (hash after push; reported in the final gate report)
+- `main == origin/main` after push
+- tracked scope: nine recovery source/config/test files + two new
+  docs + three updated docs (exact 14 files)
 - sistem CPU-only'dir
+- generated rebuild outputs remain Git-ignored / untracked
 
 ## 6. Proje klasörleri
 
@@ -480,20 +481,38 @@ yüklenmedi):
 
 Güncel durum:
 
-- **Stage 5C-C3D:** `completed_exact_signal_with_negative_emission_risk`
-- **Stage 5C-C3E:**
-  `completed_discovery_set_confidence_signal_not_independently_validated`
-- **Sıradaki kapı:** Stage 5C-C3F-A — independent holdout design
+- **Rebuild r2 Stage 4B→Stage 5C recovery:** completed
+  (historical structural counts exact; **not** historical freeze
+  restore / byte-identity claim)
+- **Canonical split generation:** `r2_capacity_balanced`
+- **Canonical split root:**
+  `outputs/reid/full_stage4b_rebuild_r2_stage5c_clean_split_capacity_balanced`
+- Selected source quotas: reused/recomputed **110/18**; vector
+  **5/7/4/2**; maximum feasible recomputed confirmed
+- Previous R4 unbalanced split deprecated for downstream (immutable)
+- Old 78-item pilot **not** reused as the r2 annotation set
+- Old C3E threshold **not** reused
+- Discovery primary annotation **not started**
+- Holdout / reserve **unopened / unreviewed**
+- Threshold / labels / predictions unseen
+- **Sıradaki kapı:**
+  `REBUILD-R5_STAGE5C_DISCOVERY_PRIMARY_ANNOTATION_FREEZE`
 - DBNet/SAR family closed; jersey OCR **not** abandoned
 - PARSeq remains the primary recognizer candidate
 - Legibility classifier is a future helper-gate candidate
   (not installed/downloaded here)
 - Stage 5D / 5E / 6 scopes unchanged
 
+Docs:
+
+- `docs/setup/rebuild-r2-stage4b-stage5-recovery.md`
+- `docs/setup/stage5c-clean-discovery-holdout-design.md`
+
 Planlanan sıra:
 
-1. Stage 5C-C3F-A independent holdout design
-2. Later confidence-gate / legibility validation only after holdout design
+1. REBUILD-R5 discovery primary annotation freeze
+2. Later confidence-gate / legibility validation only after
+   discovery/holdout protocol advances
 3. Stage 5C-D segment-level OCR aggregation
 4. Stage 5D target gallery/enrollment
 5. Stage 5E evidence fusion
@@ -633,9 +652,12 @@ Sınırlar:
 
 ## 11. Mevcut öncelik
 
-Stage 5C-C3D/C3E tamamlandı; DBNet/SAR ailesi kapalı; PARSeq primary
-candidate; threshold seçilmedi; sıradaki kapı
-**Stage 5C-C3F-A independent holdout design**:
+Rebuild r2 Stage 4B→5C recovery ve clean capacity-balanced
+discovery/holdout design tamamlandı. Canonical generation
+`r2_capacity_balanced`. Eski 78-item pilot ve C3E threshold yeniden
+kullanılmıyor. Discovery annotation henüz başlamadı; holdout
+unopened. Sıradaki kapı
+**REBUILD-R5_STAGE5C_DISCOVERY_PRIMARY_ANNOTATION_FREEZE**:
 
     Video okuma
     → İnsan/oyuncu tespiti (tamamlandı)
@@ -643,7 +665,8 @@ candidate; threshold seçilmedi; sıradaki kapı
     → ReID altyapı hazırlığı (4A tamamlandı)
     → Track-level ReID / linking baseline (4B tamamlandı)
     → Crop quality / kit / purity / segmentation (5A-5B tamamlandı)
-    → Jersey visibility + 78-item manuel pilot (5C-A tamamlandı)
+    → Jersey visibility + 78-item manuel pilot (5C-A historical;
+      not r2 annotation set)
     → MMOCR environment + DBNet/SAR asset (5C-B tamamlandı)
     → Offline CPU jersey OCR baseline smoke (5C-C1 tamamlandı)
     → Controlled ablation (5C-C2 tamamlandı; no exact signal;
@@ -654,8 +677,10 @@ candidate; threshold seçilmedi; sıradaki kapı
     → Offline PARSeq smoke (5C-C3D tamamlandı; exact 5/20;
       negative emission 26/26; no threshold)
     → PARSeq false-positive / confidence audit (5C-C3E tamamlandı;
-      descriptive ranking; no independent positive holdout)
-    → Independent holdout design (5C-C3F-A — sıradaki)
+      descriptive ranking; C3E threshold not reused)
+    → Rebuild r2 Stage 4B→5C recovery + clean 474 universe
+      + capacity-balanced split (tamamlandı; r2_capacity_balanced)
+    → Discovery primary annotation freeze (REBUILD-R5 — sıradaki)
     → Segment aggregation / gallery / fusion (5C-D, 5D, 5E)
     → Spatial continuity (Stage 6)
 

@@ -53,10 +53,14 @@ Tamamlananlar:
 - [x] Controlled SoccerNet PARSeq checkpoint acquisition (Stage 5C-C3C)
 - [x] Offline PARSeq recognizer-only smoke (Stage 5C-C3D)
 - [x] PARSeq false-positive / confidence audit (Stage 5C-C3E)
+- [x] Rebuild r2 Stage 4B→5C recovery (historical structural counts
+      exact; historical freeze restore değildir)
+- [x] Clean label-blind 474-item universe + capacity-balanced
+      discovery/holdout design (`r2_capacity_balanced`)
 
 Henüz yapılmayanlar:
 
-- [ ] Independent holdout design (Stage 5C-C3F-A)
+- [ ] Discovery primary annotation freeze (REBUILD-R5)
 - [ ] Confidence threshold seçimi / validation
 - [ ] Segment-level OCR aggregation (Stage 5C-D)
 - [ ] Target enrollment / gallery memory (Stage 5D)
@@ -65,17 +69,18 @@ Henüz yapılmayanlar:
 
 DBNet/SAR ailesi C2 sonrası kapalıdır; jersey OCR iptal edilmedi.
 SoccerNet-finetuned PARSeq primary candidate olmaya devam eder.
-C3D: frozen 46 ROI üzerinde exact **5/20**, wrong **15/20**,
-recognizer-only negative emission **26/26**; runtime contract
-validated; threshold seçilmedi. C3E: confidence descriptive ranking
-sinyali var (exact vs negative AUROC ≈0.938); discovery-set perfect
-safe point gözlendi ama bağımsız validation değildir; mevcut 20
-readable positive'in tamamı C3D discovery set'te kullanıldığı için
-`independent_positive_holdout_available=false`. Sıradaki kapı:
-**Stage 5C-C3F-A independent holdout design**. Legibility classifier
-ileride yardımcı gate adayıdır (henüz kurulmadı/indirilmedi).
-Stage 5D/5E/6 kapsamları değişmedi. Checkpoint/asset'ler Git'e
-commit edilmez.
+C3D/C3E historical pilot sonuçları referans olarak durur; **eski
+78-item pilot yeniden annotation seti değildir** ve **eski C3E
+threshold yeniden kullanılmaz**. Recovery sonrası canonical split
+generation: **`r2_capacity_balanced`** (selected recomputed
+maximum-feasible **18**; quota vector **5/7/4/2**; allocated 128 /
+unselected 346). Discovery primary annotation henüz başlamadı;
+holdout tamamen unopened/unreviewed; threshold/labels/predictions
+görülmedi. Sıradaki kapı:
+**REBUILD-R5_STAGE5C_DISCOVERY_PRIMARY_ANNOTATION_FREEZE**.
+Legibility classifier ileride yardımcı gate adayıdır (henüz
+kurulmadı/indirilmedi). Stage 5D/5E/6 kapsamları değişmedi.
+Checkpoint/asset'ler Git'e commit edilmez.
 
 ## Geliştirme ortamları
 
@@ -99,8 +104,12 @@ Aktivasyon:
   environment/repo/checkpoint bilgileri
 - [docs/setup/stage5-identity-signals-plan.md](docs/setup/stage5-identity-signals-plan.md)
   — Stage 5 identity-signals planı ve kapı durumları
+- [docs/setup/rebuild-r2-stage4b-stage5-recovery.md](docs/setup/rebuild-r2-stage4b-stage5-recovery.md)
+  — Stage 4B→5C rebuild r2 recovery / provenance
+- [docs/setup/stage5c-clean-discovery-holdout-design.md](docs/setup/stage5c-clean-discovery-holdout-design.md)
+  — Clean label-blind capacity-balanced discovery/holdout design
 - [docs/setup/stage5c-jersey-pilot-results.md](docs/setup/stage5c-jersey-pilot-results.md)
-  — 78-item manuel jersey pilot sonuçları
+  — 78-item manuel jersey pilot sonuçları (historical; not r2 annotation set)
 - [docs/setup/stage5c-jersey-mmocr-baseline-results.md](docs/setup/stage5c-jersey-mmocr-baseline-results.md)
   — Stage 5C-C1 offline DBNet+SAR baseline smoke sonuçları
 - [docs/setup/stage5c-jersey-mmocr-ablation-results.md](docs/setup/stage5c-jersey-mmocr-ablation-results.md)

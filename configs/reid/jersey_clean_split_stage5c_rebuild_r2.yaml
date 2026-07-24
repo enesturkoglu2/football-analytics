@@ -1,0 +1,299 @@
+# Stage 5C clean label-blind discovery/holdout split (rebuild r2)
+# Selection uses only model-independent clean-universe features.
+# No OCR/manual labels, no historical C3D membership, no threshold selection.
+# Source-type quotas are chosen by capacity-aware deterministic search.
+
+schema_version: reid_jersey_clean_split_config_v1
+rebuild_generation: r2
+split_generation: r2
+canonical_split_generation: r2_capacity_balanced
+stage_status: clean_label_blind_capacity_balanced_split_design
+offline_required: true
+threshold_selection_forbidden: true
+
+source:
+  clean_universe_items: outputs/reid/full_stage4b_rebuild_r2_stage5c_visibility_universe/clean_review_universe/clean_review_items.jsonl
+  expected_universe_size: 474
+  expected_reused: 399
+  expected_recomputed: 75
+
+previous_split:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5c_clean_split
+  # Deprecated only after successful capacity-balanced publish.
+  deprecated_for_downstream: false
+  immutable: true
+  deprecation_reason_if_replaced: source_type_distribution_not_representative_in_holdout
+
+canonical_split_root: outputs/reid/full_stage4b_rebuild_r2_stage5c_clean_split_capacity_balanced
+
+feature_contract:
+  # Raw fields from clean_review_items.jsonl; ranks are computed in-universe.
+  positive_raw_fields:
+    - name: number_roi_relative_area
+      direction: higher_better
+      weight: 1.0
+      missing_policy: explicit_missing_penalty
+    - name: number_roi_height
+      direction: higher_better
+      weight: 1.0
+      missing_policy: explicit_missing_penalty
+    - name: source_crop_area
+      direction: higher_better
+      weight: 0.75
+      derived_from: [source_crop_width, source_crop_height]
+      missing_policy: reject_row
+    - name: laplacian_variance
+      direction: higher_better
+      weight: 1.0
+      missing_policy: explicit_missing_penalty
+    - name: tenengrad_mean
+      direction: higher_better
+      weight: 1.0
+      missing_policy: explicit_missing_penalty
+    - name: local_contrast
+      direction: higher_better
+      weight: 1.0
+      missing_policy: explicit_missing_penalty
+    - name: entropy
+      direction: higher_better
+      weight: 0.75
+      missing_policy: explicit_missing_penalty
+    - name: edge_density
+      direction: higher_better
+      weight: 0.5
+      missing_policy: explicit_missing_penalty
+  negative_raw_fields:
+    - name: roi_other_person_union_coverage
+      direction: lower_better
+      weight: 1.25
+      missing_policy: explicit_missing_penalty
+    - name: roi_other_person_center_inside_count
+      direction: lower_better
+      weight: 0.75
+      missing_policy: explicit_missing_penalty
+  missingness_penalties:
+    - name: quality_signal_joined_missing
+      source_field: quality_signal_joined
+      when_false_or_missing: true
+      penalty: 0.15
+      justification: Stage5A join absent for some recomputed crops; explicit not imputed
+    - name: kit_descriptor_joined_missing
+      source_field: kit_descriptor_joined
+      when_false_or_missing: true
+      penalty: 0.10
+      justification: Stage5B join absent for some recomputed crops; diversity-only elsewhere
+  normalization: in_universe_rank_to_unit_then_weighted_mean_minus_penalties
+  label_independence_justification: >
+    Features are geometric/visibility/quality measurements and join-missingness
+    flags only; no jersey labels, OCR predictions, or historical membership.
+
+strata:
+  # high != readable; safety != negative ground truth
+  method: score_quantile_bands
+  score_sort: descending
+  tie_break: review_item_id_ascending
+  bands:
+    high_signal_candidate:
+      quantile_start: 0.00
+      quantile_end: 0.40
+    mid_signal_candidate:
+      quantile_start: 0.40
+      quantile_end: 0.75
+    safety_candidate:
+      quantile_start: 0.75
+      quantile_end: 1.00
+  semantics:
+    high_signal_candidate_is_readable_positive: false
+    safety_candidate_is_negative_ground_truth: false
+    strata_are_sampling_tools_only: true
+
+near_duplicate:
+  algorithm: dhash
+  input_region: number_roi_if_valid_else_full_crop
+  resize: [9, 8]   # dHash uses 9x8 then horizontal gradient -> 64 bits
+  bit_length: 64
+  distance_metric: hamming
+  near_duplicate_max_distance: 8
+  grayscale: true
+  interpolation: INTER_AREA
+
+documented_components:
+  - [4, 682]
+  - [231, 635]
+  - [593, 689]
+  - [588, 806]
+
+leakage_grouping:
+  keys:
+    - review_item_id
+    - crop_id
+    - source_crop_sha256
+    - segment_id
+    - raw_track_id
+    - documented_global_candidate_id
+  include_near_duplicate_edges: true
+  include_documented_components: true
+  use_transitive_closure: true
+
+batches:
+  discovery_primary:
+    total: 40
+    high: 20
+    mid: 10
+    safety: 10
+  discovery_reserve:
+    total: 16
+    high: 8
+    mid: 4
+    safety: 4
+  holdout_primary:
+    total: 48
+    high: 24
+    mid: 12
+    safety: 12
+  holdout_reserve:
+    total: 24
+    high: 12
+    mid: 6
+    safety: 6
+
+capacity_search:
+  enabled: true
+  universe_recomputed_ratio: [75, 474]
+  hard_minima:
+    discovery_primary: 4
+    discovery_reserve: 1
+    holdout_primary: 4
+    holdout_reserve: 1
+  proportional_reference_for_max18: [6, 2, 7, 3]
+  allocator:
+    algorithm: recomp_first_safety_mid_high_prefer_small_leakage_groups
+    prefer_small_leakage_groups: true
+    stratum_preference_for_recomputed:
+      - safety_candidate
+      - mid_signal_candidate
+      - high_signal_candidate
+  objectives_in_order:
+    - maximize_total_selected_recomputed
+    - satisfy_hard_minima
+    - minimize_sum_abs_batch_ratio_deviation_from_universe
+    - minimize_discovery_holdout_aggregate_ratio_gap
+    - maximize_primary_recomputed
+    - lexicographic_descending_quota_vector
+  search:
+    enumerate_totals_from_global_max_down_to_minima_sum: true
+    exhaustive_vectors_per_total: true
+    timeout_seconds: 120
+    max_vectors_tried: 5000
+  no_relaxation_of_leakage: true
+  no_relaxation_of_strata: true
+  no_relaxation_of_diversity: true
+
+allocation:
+  deterministic: true
+  algorithm: capacity_balanced_recomp_first_then_reused
+  priority:
+    - strata_deficit
+    - source_type_deficit
+    - leakage_group_eligibility
+    - timeline_diversity
+    - raw_track_diversity
+    - review_item_id_ascending
+  max_selected_per_segment: 1
+  max_selected_per_raw_track: 2
+  min_frame_distance_same_raw_track: 60
+  batch_order:
+    - discovery_primary
+    - discovery_reserve
+    - holdout_primary
+    - holdout_reserve
+  no_silent_stratum_backfill: true
+  no_silent_source_type_backfill: true
+  exact_source_type_quotas: true
+  preserve_timeline_quartile_balance_when_possible: true
+
+diversity_targets:
+  timeline_quartiles: 4
+  source_types:
+    - reused_baseline_selected_crop
+    - recomputed_manual_segment
+
+source_type_keys:
+  reused: reused_baseline_selected_crop
+  recomputed: recomputed_manual_segment
+
+reviewer_facing_bias_fields_forbidden:
+  - stratum
+  - signal_stratum
+  - composite_score
+  - crop_source_type
+  - kit_dominant_color_family
+  - documented_global_candidate_id
+  - near_duplicate_cluster_id
+  - leakage_group_id
+  - quality_laplacian_variance
+  - raw_track_id
+  - segment_id
+
+capacity_balancing:
+  capacity_balancing_performed_before_annotation: true
+  capacity_balancing_performed_before_predictions: true
+  capacity_balancing_performed_before_threshold_selection: true
+  quota_vector_selected_by_preregistered_algorithm: true
+  labels_used_for_quota_selection: false
+  predictions_used_for_quota_selection: false
+  contact_sheets_viewed_for_quota_selection: false
+  leakage_rules_relaxed: false
+  strata_rules_relaxed: false
+  diversity_rules_relaxed: false
+  ground_truth_used: false
+  readability_estimate: false
+  rationale: >
+    Maximize feasible recomputed coverage under fixed leakage/strata/diversity,
+    then choose the nearest universe-proportional batch quota vector without
+    labels, OCR, predictions, or contact-sheet review.
+
+contact_sheets:
+  enabled: true
+  max_items_per_sheet: 12
+  layout_columns: 4
+  layout_rows: 3
+  output_format: png
+  show_original_crop: true
+  show_roi_rectangle: true
+  show_roi_closeup: true
+  show_split_item_id: true
+  show_batch_order: true
+  upscale_interpolation: INTER_NEAREST
+  max_total_png: 12
+
+annotation_template:
+  allowed_ternary: [yes, no, uncertain]
+  # 1–2 digit exact string; leading zeros preserved (09 != 9)
+  jersey_number_pattern: '^[0-9]{1,2}$'
+  readable_yes_requires_jersey_number: true
+  readable_no_or_uncertain_requires_blank_jersey_number: true
+
+independence:
+  independent_within_rebuild_r2_protocol: true
+  strict_historical_never_seen_claim: false
+  historical_c3d_membership_unavailable: true
+  historical_manual_labels_available: false
+  player_identity_independence_guaranteed: false
+  operational_leakage_controls_complete: true
+  historical_parseq_threshold_reused: false
+  model_predictions_used_for_selection: false
+  source_type_balancing_uses_ground_truth: false
+
+preregistration:
+  threshold_selected: false
+  deployment_threshold_selected: false
+  discovery_predictions_seen: false
+  holdout_predictions_seen: false
+  discovery_labels_seen: false
+  holdout_labels_seen: false
+  historical_threshold_reused: false
+  discovery_primary_min_readable: 8
+  discovery_primary_min_negative: 20
+  holdout_primary_min_readable: 10
+  holdout_primary_min_negative: 24

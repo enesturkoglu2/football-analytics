@@ -20,10 +20,18 @@
 - **Stage 5C-C3D status:** `completed_exact_signal_with_negative_emission_risk`
 - **Stage 5C-C3E status:**
   `completed_discovery_set_confidence_signal_not_independently_validated`
-- **Next technical gate:** Stage 5C-C3F-A independent holdout design
-  (`Stage_5C_C3F_A_independent_holdout_design`)
+- **Rebuild r2 Stage 4B→5C recovery:** completed
+  (historical structural counts exact; not historical freeze restore)
+- **Stage 5C clean discovery/holdout design:**
+  `completed_capacity_balanced_clean_discovery_holdout_design`
+  (`canonical_split_generation=r2_capacity_balanced`)
+- **Next technical gate:**
+  `REBUILD-R5_STAGE5C_DISCOVERY_PRIMARY_ANNOTATION_FREEZE`
 - **Focused target-player gate:** Stage 5D
 - **Pitch-position / GameState:** Stage 6 (separate from Stage 5)
+- **Recovery / design docs:**
+  [rebuild-r2-stage4b-stage5-recovery.md](rebuild-r2-stage4b-stage5-recovery.md),
+  [stage5c-clean-discovery-holdout-design.md](stage5c-clean-discovery-holdout-design.md)
 - **Identity-signals policy:** `configs/reid/identity_signals_stage5.yaml`
 - **Crop-quality policy:** `configs/reid/crop_quality_policy_stage5a.yaml`
 - **Kit measurement config:** `configs/reid/kit_descriptor_stage5b.yaml`
@@ -247,7 +255,8 @@ Rules:
 | **5C-C3C** | controlled PARSeq checkpoint acquisition | completed |
 | **5C-C3D** | offline PARSeq recognizer-only smoke | completed (`completed_exact_signal_with_negative_emission_risk`) |
 | **5C-C3E** | PARSeq false-positive / confidence audit | completed (`completed_discovery_set_confidence_signal_not_independently_validated`) |
-| **5C-C3F-A** | independent holdout design | next |
+| **5C-C3F / R2** | rebuild r2 clean universe + capacity-balanced discovery/holdout | completed (`r2_capacity_balanced`; old C3F-A triad superseded/retained) |
+| **REBUILD-R5** | discovery primary annotation freeze | next |
 | **5C-D** | tracklet-level multi-frame jersey aggregation | pending |
 | **5D** | focused target-player enrollment and gallery design (`target_A` / `target_B` / `non_target` / `unknown`) | pending |
 | **5E** | pair-level auxiliary evidence fusion and manual-review ranking | pending |
@@ -391,10 +400,15 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
   **`completed_exact_signal_with_negative_emission_risk`**
 - Stage 5C-C3E status:
   **`completed_discovery_set_confidence_signal_not_independently_validated`**
-- Next technical gate: **Stage 5C-C3F-A independent holdout design**
+- Rebuild r2 recovery + clean capacity-balanced split:
+  **`completed_capacity_balanced_clean_discovery_holdout_design`**
+  (`r2_capacity_balanced`; selected recomputed 18; vector 5/7/4/2)
+- Next technical gate:
+  **`REBUILD-R5_STAGE5C_DISCOVERY_PRIMARY_ANNOTATION_FREEZE`**
 - PARSeq remains primary candidate; DBNet/SAR family closed;
   jersey OCR not abandoned; no threshold selected; Stage 5D/5E/6
-  scopes unchanged
+  scopes unchanged; old 78-item pilot and C3E threshold are **not**
+  reused for r2 annotation
 
 ### Stage 5C-A handoff (completed)
 
@@ -432,9 +446,13 @@ The retained downstream order is:
 - **Stage 5C-C3D (completed):** offline PARSeq smoke (5/20 exact;
   26/26 negative emission; no threshold);
 - **Stage 5C-C3E (completed):** confidence false-positive audit
-  (descriptive ranking; no selected threshold; no independent
-  positive holdout remaining);
-- **Stage 5C-C3F-A (next):** independent holdout design;
+  (descriptive ranking; no selected threshold; C3E threshold not
+  reused for r2);
+- **Rebuild r2 / clean split (completed):** 474-item label-blind
+  universe + capacity-balanced discovery/holdout
+  (`r2_capacity_balanced`; only feasible max-recomputed vector
+  5/7/4/2; previous R4 root deprecated for downstream);
+- **REBUILD-R5 (next):** discovery primary annotation freeze;
 - **Stage 5C-D:** tracklet-level multi-frame aggregation;
 - **Stage 5D:** target-player enrollment/gallery memory;
 - **Stage 5E:** evidence fusion and golden evaluation; and
@@ -543,8 +561,25 @@ Stage 5C-C2 completed a controlled recognizer/preprocessing ablation:
 - Freeze:
   `outputs/reid/full_stage4b/jersey_parseq_false_positive_audit_freeze_stage5c_c3e`
 - Doc: `docs/setup/stage5c-parseq-false-positive-audit.md`
-- Next: **Stage 5C-C3F-A independent holdout design**
+- Next after C3E historical path was independent holdout design;
+  under rebuild r2 this is superseded by the clean
+  capacity-balanced split (`r2_capacity_balanced`) and next gate
+  **REBUILD-R5 discovery primary annotation freeze**
 - Legibility classifier remains a future helper-gate candidate
+
+### Rebuild r2 clean discovery/holdout notes
+
+- Clean 474-item label-blind universe; allocated 128 / unselected 346
+- Maximum feasible selected recomputed = 18; only feasible vector
+  at that total = 5/7/4/2
+- Canonical root:
+  `outputs/reid/full_stage4b_rebuild_r2_stage5c_clean_split_capacity_balanced`
+- Previous R4 unbalanced split deprecated for downstream
+- Docs:
+  [rebuild-r2-stage4b-stage5-recovery.md](rebuild-r2-stage4b-stage5-recovery.md),
+  [stage5c-clean-discovery-holdout-design.md](stage5c-clean-discovery-holdout-design.md)
+- Old C3F-A holdout triad retained for history/tests;
+  `must_not_be_used_for_new_r2_annotation=true`
 
 ### Stage 5B3 guardrails (retained)
 

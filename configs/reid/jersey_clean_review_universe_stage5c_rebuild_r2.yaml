@@ -1,0 +1,94 @@
+# Stage 5C clean canonical review universe (rebuild r2)
+# Label-blind inventory from jersey visibility crop signals only.
+# No panels, OCR, discovery/holdout selection, or manual annotation.
+
+schema_version: reid_jersey_clean_review_universe_config_v1
+rebuild_generation: r2
+stage5c_universe_generation: r2
+stage_status: clean_label_blind_universe_baseline
+
+input:
+  require_visibility_crop_signal_schema: reid_jersey_visibility_crop_signal_v1
+  require_visibility_summary_status_ok: true
+  use_existing_visibility_signals_only: true
+  allow_video_input: false
+  allow_new_crop_extraction: false
+  require_source_crop_sha_match: true
+  allow_quality_join: true
+  allow_kit_join: true
+  allow_documented_global_candidate_metadata: true
+  quality_join_is_optional_for_recomputed_crops: true
+  kit_join_is_optional_for_recomputed_crops: true
+
+review_item_id:
+  # Preserve historical Stage 5C review ID contract from jersey_review.py:
+  # review_item_id = "review_" + crop_id
+  # where crop_id is track_<raw>_frame_<frame>_rank_<rank>
+  format: "review_{crop_id}"
+  example: review_track_10_frame_77_rank_1
+
+deterministic_ordering:
+  # Exact sort key (ascending):
+  # 1) raw_track_id
+  # 2) segment_id
+  # 3) frame_index
+  # 4) selection_rank
+  # 5) crop_id
+  keys:
+    - raw_track_id
+    - segment_id
+    - frame_index
+    - selection_rank
+    - crop_id
+  canonical_order_field: canonical_order
+  canonical_order_start: 1
+
+exclusions:
+  old_manual_label_artifacts: true
+  mmocr_predictions: true
+  parseq_predictions: true
+  ocr_confidence: true
+  discovery_membership: true
+  holdout_membership: true
+  threshold_filtering: true
+  panel_rendering: true
+
+manual_fields_must_be_null:
+  - manual_crop_valid
+  - manual_back_facing
+  - manual_number_visible
+  - manual_number_readable
+  - manual_digit_count
+  - manual_jersey_number
+  - manual_contamination_affects_number_region
+  - manual_notes
+  - reviewer
+  - reviewed_at
+
+ocr_fields_forbidden_nonzero:
+  - ocr_prediction
+  - ocr_confidence
+  - ocr_exact_match
+  - ocr_wrong
+  - threshold_acceptance
+
+semantics:
+  annotation_status: unreviewed
+  review_universe_label_blind: true
+  selection_performed: false
+  global_candidate_id_is_not_player_identity: true
+  global_candidate_id_is_not_jersey_number: true
+  global_candidate_id_is_not_team_assignment: true
+
+output:
+  items_filename: clean_review_items.jsonl
+  summary_filename: clean_review_universe_summary.json
+  schema_version_items: reid_jersey_clean_review_item_v1
+  png_jpeg_mp4_allowed: false
+
+safety:
+  source_crops_immutable: true
+  visibility_artifacts_immutable_except_this_output: true
+  identity_assignment_enabled: false
+  automatic_linking_enabled: false
+  accuracy_claim_allowed: false
