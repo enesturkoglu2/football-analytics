@@ -57,11 +57,15 @@ Tamamlananlar:
       exact; historical freeze restore değildir)
 - [x] Clean label-blind 474-item universe + capacity-balanced
       discovery/holdout design (`r2_capacity_balanced`)
+- [x] Discovery primary annotation freeze (REBUILD-R5; reserve closed)
+- [x] Discovery-primary PARSeq inference + zero-error candidate gate
+      (REBUILD-R6; support=1; not a deployment threshold)
 
 Henüz yapılmayanlar:
 
-- [ ] Discovery primary annotation freeze (REBUILD-R5)
-- [ ] Confidence threshold seçimi / validation
+- [ ] Holdout primary annotation freeze (REBUILD-R7)
+- [ ] Holdout evaluation against frozen candidate gate
+- [ ] Confidence threshold seçimi / validation (deployment)
 - [ ] Segment-level OCR aggregation (Stage 5C-D)
 - [ ] Target enrollment / gallery memory (Stage 5D)
 - [ ] Evidence fusion evaluation (Stage 5E)
@@ -72,12 +76,14 @@ SoccerNet-finetuned PARSeq primary candidate olmaya devam eder.
 C3D/C3E historical pilot sonuçları referans olarak durur; **eski
 78-item pilot yeniden annotation seti değildir** ve **eski C3E
 threshold yeniden kullanılmaz**. Recovery sonrası canonical split
-generation: **`r2_capacity_balanced`** (selected recomputed
-maximum-feasible **18**; quota vector **5/7/4/2**; allocated 128 /
-unselected 346). Discovery primary annotation henüz başlamadı;
-holdout tamamen unopened/unreviewed; threshold/labels/predictions
-görülmedi. Sıradaki kapı:
-**REBUILD-R5_STAGE5C_DISCOVERY_PRIMARY_ANNOTATION_FREEZE**.
+generation: **`r2_capacity_balanced`**. Discovery-primary annotation
+tamamlandı (10 readable / 27 non-readable; reserve açılmadı).
+Discovery PARSeq: exact 5/5 wrong; negative digit emission **27/27**;
+zero-error candidate cut exact **`0.99992299168434329`** (`>=`,
+support=1, item `discovery_primary_028`). Bu cut **deployment /
+calibration claim değildir**; holdout sonucuna göre değiştirilemez.
+Holdout hâlâ unopened/unreviewed. Sıradaki kapı:
+**REBUILD-R7_STAGE5C_HOLDOUT_PRIMARY_ANNOTATION_FREEZE**.
 Legibility classifier ileride yardımcı gate adayıdır (henüz
 kurulmadı/indirilmedi). Stage 5D/5E/6 kapsamları değişmedi.
 Checkpoint/asset'ler Git'e commit edilmez.
@@ -108,6 +114,8 @@ Aktivasyon:
   — Stage 4B→5C rebuild r2 recovery / provenance
 - [docs/setup/stage5c-clean-discovery-holdout-design.md](docs/setup/stage5c-clean-discovery-holdout-design.md)
   — Clean label-blind capacity-balanced discovery/holdout design
+- [docs/setup/stage5c-discovery-parseq-candidate-gate-r2.md](docs/setup/stage5c-discovery-parseq-candidate-gate-r2.md)
+  — Discovery-primary PARSeq candidate gate (r2; not deployment)
 - [docs/setup/stage5c-jersey-pilot-results.md](docs/setup/stage5c-jersey-pilot-results.md)
   — 78-item manuel jersey pilot sonuçları (historical; not r2 annotation set)
 - [docs/setup/stage5c-jersey-mmocr-baseline-results.md](docs/setup/stage5c-jersey-mmocr-baseline-results.md)

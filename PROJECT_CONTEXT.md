@@ -141,16 +141,16 @@ Ana dal:
 
     94daa9e Create project foundation and record environment
 
-Güncel durum (REBUILD-R4D freeze / documentation commit):
+Güncel durum (REBUILD-R6A discovery-gate freeze / documentation commit):
 
-- pre-commit HEAD: `b386f07c96782bcb595fbd7dd2fdfd696e491003`
-- documentation/application commit: this REBUILD-R4D commit
+- pre-commit HEAD: `565d7ea03c75a3bac6c5dba888bfc21bade4a411`
+- documentation/application commit: this REBUILD-R6A commit
   (hash after push; reported in the final gate report)
 - `main == origin/main` after push
-- tracked scope: nine recovery source/config/test files + two new
-  docs + three updated docs (exact 14 files)
+- tracked scope: three discovery-gate source/config/test files +
+  one new gate doc + four updated docs (exact 8 files)
 - sistem CPU-only'dir
-- generated rebuild outputs remain Git-ignored / untracked
+- generated rebuild / annotation / gate outputs remain Git-ignored
 
 ## 6. Proje klasörleri
 
@@ -492,11 +492,18 @@ Güncel durum:
 - Previous R4 unbalanced split deprecated for downstream (immutable)
 - Old 78-item pilot **not** reused as the r2 annotation set
 - Old C3E threshold **not** reused
-- Discovery primary annotation **not started**
-- Holdout / reserve **unopened / unreviewed**
-- Threshold / labels / predictions unseen
+- **REBUILD-R5:** discovery-primary annotation freeze complete
+  (10 readable / 27 non-readable / 3 uncertain; reserve closed)
+- **REBUILD-R6:** discovery-primary PARSeq inference + candidate gate
+  derived (`DISCOVERY_SAFE_CANDIDATE_GATE_DERIVED`)
+  - exact cut `0.99992299168434329` (`>=`), float64 hex `3fefff5e8079b000`
+  - support=1 (`discovery_primary_028`); wrong/neg/uncertain accepted=0
+  - positive exact/wrong=5/5; negative digit emission=27/27
+  - **not** deployment threshold; **not** calibrated probability
+  - immutable vs later holdout outcomes
+- Holdout / reserve **still unopened / unreviewed**
 - **Sıradaki kapı:**
-  `REBUILD-R5_STAGE5C_DISCOVERY_PRIMARY_ANNOTATION_FREEZE`
+  `REBUILD-R7_STAGE5C_HOLDOUT_PRIMARY_ANNOTATION_FREEZE`
 - DBNet/SAR family closed; jersey OCR **not** abandoned
 - PARSeq remains the primary recognizer candidate
 - Legibility classifier is a future helper-gate candidate
@@ -507,16 +514,18 @@ Docs:
 
 - `docs/setup/rebuild-r2-stage4b-stage5-recovery.md`
 - `docs/setup/stage5c-clean-discovery-holdout-design.md`
+- `docs/setup/stage5c-discovery-parseq-candidate-gate-r2.md`
 
 Planlanan sıra:
 
-1. REBUILD-R5 discovery primary annotation freeze
-2. Later confidence-gate / legibility validation only after
-   discovery/holdout protocol advances
-3. Stage 5C-D segment-level OCR aggregation
-4. Stage 5D target gallery/enrollment
-5. Stage 5E evidence fusion
-6. Stage 6 spatial continuity / pitch position
+1. REBUILD-R7 holdout primary annotation freeze
+2. Holdout evaluation against the frozen discovery candidate gate
+3. Later deployment/calibration decisions only if holdout protocol
+   allows (candidate cut itself is not retuned post-holdout)
+4. Stage 5C-D segment-level OCR aggregation
+5. Stage 5D target gallery/enrollment
+6. Stage 5E evidence fusion
+7. Stage 6 spatial continuity / pitch position
 
 ## 9. Cursor için zorunlu kurallar
 
@@ -652,12 +661,14 @@ Sınırlar:
 
 ## 11. Mevcut öncelik
 
-Rebuild r2 Stage 4B→5C recovery ve clean capacity-balanced
-discovery/holdout design tamamlandı. Canonical generation
-`r2_capacity_balanced`. Eski 78-item pilot ve C3E threshold yeniden
-kullanılmıyor. Discovery annotation henüz başlamadı; holdout
-unopened. Sıradaki kapı
-**REBUILD-R5_STAGE5C_DISCOVERY_PRIMARY_ANNOTATION_FREEZE**:
+Rebuild r2 Stage 4B→5C recovery, clean capacity-balanced split,
+discovery-primary annotation freeze ve discovery PARSeq candidate
+gate tamamlandı. Canonical generation `r2_capacity_balanced`.
+Candidate cut exact `0.99992299168434329` (`>=`, support=1);
+deployment/calibration claim yok; holdout sonucuna göre cut
+değiştirilemez. Negative digit emission 27/27 riski devam eder.
+Holdout hâlâ unopened. Sıradaki kapı
+**REBUILD-R7_STAGE5C_HOLDOUT_PRIMARY_ANNOTATION_FREEZE**:
 
     Video okuma
     → İnsan/oyuncu tespiti (tamamlandı)
@@ -680,7 +691,10 @@ unopened. Sıradaki kapı
       descriptive ranking; C3E threshold not reused)
     → Rebuild r2 Stage 4B→5C recovery + clean 474 universe
       + capacity-balanced split (tamamlandı; r2_capacity_balanced)
-    → Discovery primary annotation freeze (REBUILD-R5 — sıradaki)
+    → Discovery primary annotation freeze (R5 tamamlandı; reserve closed)
+    → Discovery PARSeq inference + candidate gate (R6 tamamlandı;
+      cut 0.99992299168434329; support=1; not deployment)
+    → Holdout primary annotation freeze (REBUILD-R7 — sıradaki)
     → Segment aggregation / gallery / fusion (5C-D, 5D, 5E)
     → Spatial continuity (Stage 6)
 

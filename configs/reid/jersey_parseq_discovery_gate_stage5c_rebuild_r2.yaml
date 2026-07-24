@@ -1,0 +1,80 @@
+# Stage 5C rebuild-r2 discovery-primary PARSeq inference + candidate gate.
+# Discovery-only; no reserve/holdout access; no historical C3D/C3E threshold reuse.
+schema_version: reid_jersey_parseq_discovery_gate_config_v1
+stage: 5C-R6
+device: cpu
+offline_required: true
+expected_item_count: 40
+color_convention: bgr_to_rgb
+roi_source: clean_universe_canonical_number_roi
+roi_padding: 0
+manual_labels_joined_only_after_predictions_written: false
+# Labels are joined for evaluation after inference; inference path must not
+# use labels for decode/confidence.
+
+project_head_expected: 565d7ea03c75a3bac6c5dba888bfc21bade4a411
+
+canonical_split:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5c_clean_split_capacity_balanced
+  generation: r2_capacity_balanced
+  listing_sha256: 2ae8f486157bf8ee4cf1c64be5601e45ad04b228f439d5ac1d99d476f79b369e
+  discovery_primary_manifest: discovery_primary_manifest.jsonl
+
+annotation_freeze:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5c_discovery_primary_annotation_freeze
+  frozen_csv: discovery_primary_annotations_frozen.csv
+
+clean_universe_items: outputs/reid/full_stage4b_rebuild_r2_stage5c_visibility_universe/clean_review_universe/clean_review_items.jsonl
+
+parseq_root: /home/enesturkoglu2/projects/external/jersey-number-pipeline/str/parseq
+external_repo: /home/enesturkoglu2/projects/external/jersey-number-pipeline
+external_repo_head: 007d54e5530a66616ed5081ca35e0028b36aadb5
+
+checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-parseq/soccernet-finetuned/parseq_epoch=24-step=2575-val_accuracy=95.6044-val_NED=96.3255.ckpt
+  sha256: 14aeb3b13876500e04c93674716a3dae54c2e2d4e06b1abe04758d260d314879
+  byte_size: 381608677
+
+environment:
+  name: sn-jersey-parseq-cpu
+  manifest_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-parseq/environment/environment_manifest.json
+  manifest_sha256_prefix: 7377782dad758f7f
+
+preprocessing_contract:
+  # Frozen before any discovery prediction (tracked adapter/smoke contract).
+  input_region: number_roi_xyxy_from_clean_universe
+  roi_expansion_px: 0
+  resize: [32, 128]   # HxW from model hparams img_size
+  interpolation: BICUBIC
+  color_order: BGR_crop_slice_then_RGB_for_transform
+  normalize_mean: 0.5
+  normalize_std: 0.5
+  decode: str_py_logits_slice_3x11_softmax_tokenizer_decode
+  confidence_metric: product_of_tokenizer_decode_selected_token_probabilities
+  top1_only: true
+  stochastic_augmentation: false
+
+digit_policy:
+  pattern: '^[0-9]{1,2}$'
+  max_digits: 2
+  letter_to_digit_conversion: false
+  leading_zero_preserved: true
+  whitespace_strip_only: true
+
+gate_derivation:
+  comparison_operator: '>='
+  require_accepted_wrong_positive: 0
+  require_accepted_negative: 0
+  require_accepted_exact_gt: 0
+  selection_rule:
+    - lowest_numeric_confidence_cut
+    - higher_accepted_exact
+    - confidence_cut_ascending
+    - operating_point_id_ascending
+  historical_c3e_threshold_forbidden: true
+  discovery_reserve_forbidden_for_threshold_search: true
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5c_discovery_primary_parseq_gate
+
+network_policy: pass_offline_discovery_parseq_only

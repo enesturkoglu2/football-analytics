@@ -4,8 +4,11 @@
 - **Canonical root:**
   `outputs/reid/full_stage4b_rebuild_r2_stage5c_clean_split_capacity_balanced`
 - **Design freeze gate:** REBUILD-R4D
+- **Discovery annotation:** REBUILD-R5 complete (reserve closed)
+- **Discovery PARSeq candidate gate:** REBUILD-R6 complete
+  (cut `0.99992299168434329`; support=1; not deployment)
 - **Exact next gate:**
-  `REBUILD-R5_STAGE5C_DISCOVERY_PRIMARY_ANNOTATION_FREEZE`
+  `REBUILD-R7_STAGE5C_HOLDOUT_PRIMARY_ANNOTATION_FREEZE`
 
 This design is **label-blind** and **prediction-blind**. It does not
 reuse the historical 78-item pilot as an annotation set and does not
@@ -188,21 +191,31 @@ After successful R4C publish:
 
 Do not use the previous R4 root for new annotation.
 
-## 15. Threshold / labels / predictions unseen
+## 15. Threshold / labels / predictions (design-time vs R6)
 
-Preregistration remains:
+At clean-split design / R4–R5 time, preregistration remained:
 
-- `threshold_selected = false`
-- `deployment_threshold_selected = false`
-- `discovery_predictions_seen = false`
-- `holdout_predictions_seen = false`
-- `discovery_labels_seen = false`
-- `holdout_labels_seen = false`
-- `historical_threshold_reused = false`
+- `threshold_selected = false` on the split package itself
+- discovery/holdout labels and predictions unseen for split design
+- historical threshold reused = false
 
-Capacity balancing completed **before** annotation, predictions, and
-threshold selection. Contact sheets were not visually interpreted for
-quota selection.
+After REBUILD-R6, a **discovery-derived holdout-validation candidate
+cut** exists in the separate gate root:
+
+- exact decimal `0.99992299168434329`
+- float64 hex `3fefff5e8079b000`
+- operator `>=`
+- support=1 (`discovery_primary_028`)
+- `deployment_threshold_selected=false`
+- `mutable_after_holdout=false`
+- historical C3E cut **not** used
+
+Negative digit emission on discovery negatives was **27/27** under
+the frozen recognizer-only contract; safety relies on the cut, not
+on zero emission.
+
+Details:
+[stage5c-discovery-parseq-candidate-gate-r2.md](stage5c-discovery-parseq-candidate-gate-r2.md)
 
 ## 16. Preregistered discovery / holdout rules
 
@@ -249,11 +262,12 @@ Preserved but superseded holdout-design triad:
 
 ## 19. Exact next gate
 
-`REBUILD-R5_STAGE5C_DISCOVERY_PRIMARY_ANNOTATION_FREEZE`
+`REBUILD-R7_STAGE5C_HOLDOUT_PRIMARY_ANNOTATION_FREEZE`
 
-Until then:
+Until then / during R7:
 
-- do not fill annotation fields outside the approved gate
-- do not open/review holdout or reserve packages
-- do not run model/OCR inference for this split
-- do not select a threshold
+- do not retune the frozen discovery candidate cut after holdout
+  results
+- do not open/review holdout packages before the approved gate
+- do not treat the candidate cut as a deployment threshold
+- discovery reserve remains closed for threshold search
