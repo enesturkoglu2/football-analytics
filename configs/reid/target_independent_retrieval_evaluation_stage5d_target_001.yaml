@@ -1,0 +1,96 @@
+# Stage 5D-F3 — Independent sample retrieval scoring and evaluation.
+# First allowed gallery↔sample cosine scoring. No threshold, identity, or gallery mutation.
+schema_version: reid_target_independent_retrieval_evaluation_config_v1
+stage: 5D-F3
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f3_independent_retrieval_evaluation_only
+
+project_head_expected: 380a3cbe87dddb8a759870f00c8fb38f1e4d16f5
+project_head_message_expected: Amend target 001 retrieval metrics before scoring
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  decode_forbidden: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+  load_forbidden: true
+  new_embedding_forbidden: true
+
+stage5d_f2b_amendment:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_post_gt_metric_feasibility_amendment
+  expected_final_status: COMPLETED_STAGE5D_F2B_TARGET_001_METRIC_CONTRACT_AMENDED_READY_FOR_SCORING
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F2B_TARGET_001_METRIC_AMENDMENT_380a3cb.tar.gz
+  expected_snapshot_sha256: 1a85e90c7813231e03e0dda72329daabdb94859c8aee1ea68c7507b880361baf
+
+stage5d_f2a_freeze:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_sample_ground_truth_freeze
+  expected_final_status: COMPLETED_STAGE5D_F2A_TARGET_001_SAMPLE_GROUND_TRUTH_FROZEN
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F2A_TARGET_001_GT_FREEZE_3245ce3.tar.gz
+  expected_snapshot_sha256: d5db0e4d978ed7677f196f2516fc894f8b4803a09f14f59960a78097ec601504
+
+stage5d_f2_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_sample_ground_truth_review_package
+  mapping_rel: inventory/target_001_sample_evaluation_mapping.jsonl
+
+stage5d_f1_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_validation_design
+  expected_final_status: COMPLETED_STAGE5D_F1_TARGET_001_INDEPENDENT_VALIDATION_DESIGN_READY
+  scoreable_universe_rel: sample_universe/target_001_sample_scoreable_universe.jsonl
+  scoring_contract_rel: scoring_design/target_001_retrieval_scoring_contract.json
+
+gallery_v1:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v1
+  expected_final_status: COMPLETED_STAGE5D_B1E_F_TARGET_001_GALLERY_BUILT_READY_FOR_VALIDATION
+  expected_members: 7
+  expected_dimension: 512
+  expected_medoid_anchor: target_001_ext_anchor_004
+  individual_npy_rel: gallery/target_001_individual_gallery.npy
+  centroid_npy_rel: gallery/target_001_gallery_centroid.npy
+  medoid_npy_rel: gallery/target_001_gallery_medoid.npy
+  members_jsonl_rel: gallery/target_001_gallery_members.jsonl
+  embeddings_sha_rel: embeddings/target_001_anchor_embeddings_sha256.json
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_B1E_F_TARGET_001_GALLERY_e43a768.tar.gz
+  expected_snapshot_sha256: bc448e6ea61331cd864268b687cb9b6c84048a9f9295737db43624b851b8468e
+
+sample_embeddings:
+  artifact_path: outputs/reid/full_stage4b_rebuild_r2_stage5_replay/segmented_reid_stage5b3/segment_embeddings.npz
+  expected_artifact_sha256: 355676d7e017c3b3b5397bf82e9a088686740fbc495df35598fc90b897d28d97
+  expected_query_count: 150
+  expected_dimension: 512
+  recompute_forbidden: true
+
+scoring:
+  primary: max_individual_cosine
+  secondary:
+    - top3_mean_individual_cosine
+    - centroid_cosine
+    - medoid_cosine
+    - mean_individual_cosine
+  norm_atol: 1.0e-4
+  numeric_atol: 1.0e-6
+  dtype: float32
+
+policy:
+  threshold_selected: false
+  identity_assignment: false
+  gallery_mutation: false
+  automatic_gallery_growth: false
+  new_embeddings: false
+  decode_sample_video: false
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_retrieval_evaluation
