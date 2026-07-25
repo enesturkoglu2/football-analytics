@@ -1,0 +1,127 @@
+# Stage 5D-B1E-F — Target 001 frozen anchor OSNet embedding and gallery.
+# Embeds only the 7 approved anchors. No sample.mp4 retrieval, threshold,
+# automatic gallery growth, YOLO, ByteTrack, or OCR.
+schema_version: reid_target_gallery_build_config_v1
+stage: 5D-B1E-F
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_b1e_f_target_gallery_build_only
+
+project_head_expected: 3d56f0901fda4f96f030724793a5b6159e7912f2
+project_head_message_expected: Freeze target 001 external anchor selections
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_bytes: 14366504
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  decode_forbidden: true
+  inference_forbidden: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+  model_name: osnet_x1_0
+  embedding_dimension: 512
+  checkpoint_family: market1501_softmax_256x128
+
+canonical_reid_runtime:
+  sn_reid_root: /home/enesturkoglu2/projects/soccernet/sn-reid
+  expected_sn_reid_commit: 621e2b0f2d2a7a3e207b8dd747542b6608bf72db
+  conda_env: sn-reid-cpu
+  batch_size: 8
+  device: cpu
+  eval_mode: true
+  gradients_disabled: true
+  # Segmented ReID / Stage 5B3 unit-norm and similarity tolerances.
+  embedding_determinism_atol: 1.0e-5
+  unit_norm_atol: 1.0e-4
+
+stage5d_b1e_e_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_anchor_freeze
+  expected_final_status: COMPLETED_STAGE5D_B1E_E_TARGET_001_EXTERNAL_ANCHORS_FROZEN
+  expected_target_id: target_001
+  expected_target_alias: sarı takım 5 numaralı oyuncu
+  expected_reviewed_candidates: 15
+  expected_approved_anchors: 7
+  expected_redundant_valid_non_selected: 5
+  expected_multi_person_ambiguous: 2
+  expected_invalid: 1
+  expected_embeddings: 0
+  expected_gallery_members: 0
+  expected_prototypes: 0
+  expected_identity_assignments: 0
+  expected_occurrence_distribution:
+    EXT_004: 4
+    EXT_183: 1
+    EXT_198: 2
+  expected_view_distribution:
+    front: 1
+    front_oblique: 1
+    right_side: 1
+    rear_oblique: 2
+    rear: 2
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_B1E_E_TARGET_001_ANCHOR_FREEZE_3d56f09.tar.gz
+  expected_snapshot_sha256: 439eb03e600252ece3f980e3d47257a3a2327599b761cd9ba52ccdfae04a17e6
+
+stage5d_b1e_d_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_anchor_review_package
+  expected_final_status: COMPLETED_STAGE5D_B1E_D_TARGET_001_EXTERNAL_ANCHOR_REVIEW_READY
+
+stage5d_a_preflight:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_gallery_preflight
+  gallery_design_contract: stage5d_gallery_design_contract.json
+  automatic_gallery_growth: false
+
+target:
+  target_id: target_001
+  target_alias: sarı takım 5 numaralı oyuncu
+
+approved_exact_ids:
+  - target_001_ext_anchor_001
+  - target_001_ext_anchor_003
+  - target_001_ext_anchor_004
+  - target_001_ext_anchor_006
+  - target_001_ext_anchor_008
+  - target_001_ext_anchor_011
+  - target_001_ext_anchor_014
+
+excluded_candidate_ids:
+  - target_001_ext_anchor_002
+  - target_001_ext_anchor_005
+  - target_001_ext_anchor_007
+  - target_001_ext_anchor_009
+  - target_001_ext_anchor_010
+  - target_001_ext_anchor_012
+  - target_001_ext_anchor_013
+  - target_001_ext_anchor_015
+
+gallery_policy:
+  automatic_gallery_growth: false
+  automatic_enrollment: false
+  pseudo_label_enrollment: false
+  threshold_selection: false
+  sample_identity_assignment: false
+  human_approved_only: true
+  gallery_member_type: individual_frozen_anchor
+  scoring_view: l2_normalized_embedding
+  stored_source: original_frozen_embedding
+  original_is_l2_normalized: true
+
+outlier_diagnostics:
+  removal_allowed: false
+  method: median_mad
+  mad_multiplier: 3.0
+  descriptive_only: true
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v1
