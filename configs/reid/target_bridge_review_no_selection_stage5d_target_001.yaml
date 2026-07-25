@@ -1,0 +1,73 @@
+# Stage 5D-B1D — Bridge review no-selection freeze + external enrollment handoff.
+# Does not select any bridge candidate. No new inference or gallery membership.
+schema_version: reid_target_bridge_review_no_selection_freeze_config_v1
+stage: 5D-B1D
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_b1d_bridge_no_selection_freeze_only
+
+project_head_expected: 32bd5cef513d726ca60f195f6ac3f113c62b1491
+
+source_video:
+  path: data/test_clips/sample.mp4
+  expected_bytes: 18842840
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+
+stage5d_b1c2_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_seed_to_eligible_bridge_review
+  expected_final_status: COMPLETED_STAGE5D_B1C2_SEED_TO_ELIGIBLE_BRIDGE_REVIEW_READY
+  expected_eligible_count: 5
+  expected_frozen_seed: SEED_CANDIDATE_07
+  expected_segment_id: raw_222_full
+  expected_raw_track_id: 222
+
+stage5d_b1b_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_seed_freeze_anchor_derivation
+
+target_definition:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package/target_definition/target_001_definition_frozen.json
+
+human_no_selection_freeze:
+  target_id: target_001
+  selected_bridge_candidate_code: ""
+  manual_target_continuation_found: "no"
+  manual_review_result: NO_ELIGIBLE_BRIDGE_CONTINUATION_SELECTED
+  manual_target_confirmed: "yes"
+  manual_human_verified_number_seen: "yes"
+  reviewer: Furkan
+  final_approver: Furkan
+  manual_notes: >-
+    Frame 280–420 boyunca hedef 5 numaralı oyuncu
+    FROZEN_HUMAN_SEED_REF olarak görünmeye devam etmektedir.
+    BRIDGE_CANDIDATE_01–05 hedefle aynı karelerde bulunan ayrı
+    kişilerdir. Bu nedenle hiçbir bridge candidate seçilmemiştir.
+  candidate_decisions:
+    BRIDGE_CANDIDATE_01: non_player
+    BRIDGE_CANDIDATE_02: target_anchor_no
+    BRIDGE_CANDIDATE_03: target_anchor_no
+    BRIDGE_CANDIDATE_04: target_anchor_no
+    BRIDGE_CANDIDATE_05: target_anchor_no
+
+external_enrollment_requirements:
+  target_id: target_001
+  human_verified_jersey_number: 5
+  automated_ocr_used: false
+  clip_must_be_enrollment_only: true
+  clip_must_not_be_future_evaluation_input: true
+  human_seed_selection_required: true
+  several_full_body_views_preferred: true
+  manual_frozen_enrollment: true
+  automatic_gallery_growth: false
+  unknown_identity_preserved: true
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_bridge_review_no_selection_freeze
