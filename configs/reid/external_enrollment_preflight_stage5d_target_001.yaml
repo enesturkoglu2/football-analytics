@@ -1,0 +1,57 @@
+# Stage 5D-B1E-A — External enrollment clip ingest + overlap preflight.
+# No detection, tracking, embedding, OCR, similarity, or gallery membership.
+schema_version: reid_external_enrollment_preflight_config_v1
+stage: 5D-B1E-A
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_b1e_a_external_enrollment_preflight_only
+
+project_head_expected: f94ab3353fe2ab933a1bb1189cb7450188249331
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_bytes: 14366504
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+  expected_codec: h264
+  expected_width: 1332
+  expected_height: 746
+  expected_fps: 30.0
+  expected_video_frames: 784
+  expected_video_duration_sec: 26.1333
+  expected_format_duration_sec: 26.154646
+  allow_audio: true
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_bytes: 18842840
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  expected_frames: 1023
+  expected_width: 1336
+  expected_height: 744
+  expected_fps: 30.0
+  expected_format_duration_sec: 34.111979
+
+stage5d_b1d_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_bridge_review_no_selection_freeze
+  expected_final_status: COMPLETED_STAGE5D_B1D_NO_BRIDGE_SELECTION_EXTERNAL_ENROLLMENT_REQUIRED
+
+target_definition:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package/target_definition/target_001_definition_frozen.json
+
+overlap_audit:
+  coarse_sample_stride: 15
+  refine_sample_stride: 3
+  refine_window_radius: 30
+  dhash_size: 16
+  dhash_hamming_candidate_max: 40
+  verify_resize: [96, 54]
+  verify_corr_min: 0.75
+  verify_mae_max: 0.35
+  contiguous_gap_max_frames: 30
+  min_eligible_duration_sec: 5.0
+
+overview_sheet:
+  sample_stride_frames: 30
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_enrollment_preflight
