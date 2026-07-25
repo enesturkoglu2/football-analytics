@@ -1,0 +1,121 @@
+# Stage 5D-F2 — Target 001 sample ground-truth review package.
+# Label-blind / similarity-blind human review package only.
+# No gallery↔sample scoring, no embedding vector reads, no GT fill,
+# no threshold / identity / gallery mutation.
+schema_version: reid_sample_ground_truth_review_config_v1
+stage: 5D-F2
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f2_sample_ground_truth_review_only
+
+project_head_expected: 011d732ec0822238f5042257cd924a88fc459c8f
+project_head_message_expected: Add target 001 independent retrieval validation design
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_bytes: 14366504
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_bytes: 18842840
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  expected_frames: 1023
+  expected_width: 1336
+  expected_height: 744
+  expected_fps: 30.0
+  inference_forbidden: true
+  context_decode_allowed: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+  load_forbidden: true
+
+stage5d_f1_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_validation_design
+  expected_final_status: COMPLETED_STAGE5D_F1_TARGET_001_INDEPENDENT_VALIDATION_DESIGN_READY
+  expected_gallery_members: 7
+  expected_scoreable: 150
+  expected_no_embedding: 141
+  expected_total_segments: 291
+  expected_embedding_dimension: 512
+  expected_similarity_rows: 0
+  expected_ranking_rows: 0
+  expected_manual_decisions: 0
+  expected_threshold_selected: false
+  expected_identity_assignments: 0
+  expected_automatic_gallery_growth: false
+  expected_primary_score: max_individual_cosine
+  expected_secondary_scores:
+    - top3_mean_individual_cosine
+    - centroid_cosine
+    - medoid_cosine
+    - mean_individual_cosine
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F1_TARGET_001_VALIDATION_DESIGN_011d732.tar.gz
+  expected_snapshot_sha256: 2acdeb4e94294bcff4c658c88b0555ae427fc0df52b780676cb6ed9a9b6f48e2
+
+gallery_v1:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v1
+  expected_readiness: TARGET_001_GALLERY_BUILT_READY_FOR_INDEPENDENT_VALIDATION
+  expected_individual_members: 7
+  expected_centroid_count: 1
+  expected_medoid_count: 1
+  npy_load_forbidden: true
+
+target_definition:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package/target_definition/target_001_definition_frozen.json
+
+stage5d_b1e_a_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_enrollment_preflight
+  overlap_audit_relpath: overlap_audit/target_001_external_vs_sample_overlap_audit.json
+
+sample_segment_view:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5_replay/segment_view_stage5b3
+  track_segments: track_segments.jsonl
+  segment_observations: segment_observations.jsonl
+
+sample_baseline_crops:
+  path: outputs/reid/full_stage4b_rebuild_r2/stage4b/crops
+  crop_manifest: crop_manifest.jsonl
+
+sample_segmented_reid:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5_replay/segmented_reid_stage5b3
+  embeddings_npz: segment_embeddings.npz
+  expected_embeddings_sha256: 355676d7e017c3b3b5397bf82e9a088686740fbc495df35598fc90b897d28d97
+  segment_crop_manifest: segment_crop_manifest.jsonl
+  vector_load_forbidden: true
+
+forbidden_sample_seed_segment: raw_222_full
+
+contact_sheets:
+  items_per_sheet: 12
+  sheet_count: 13
+  last_sheet_items: 6
+  min_width_px: 3600
+  grid_cols: 4
+  grid_rows: 3
+
+target:
+  target_id: target_001
+  target_alias: sarı takım 5 numaralı oyuncu
+
+policy:
+  similarity_blind: true
+  label_blind: true
+  gallery_vectors_read: false
+  sample_embedding_vectors_read: false
+  ground_truth_decisions: false
+  threshold_selection: false
+  identity_assignment: false
+  automatic_gallery_growth: false
+  gallery_mutation: false
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_sample_ground_truth_review_package
