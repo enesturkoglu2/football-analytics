@@ -1,0 +1,73 @@
+# Stage 5D-B1B — Freeze SEED_CANDIDATE_07 and derive anchors if eligible.
+# No gallery membership, OCR, similarity, or new inference.
+schema_version: reid_target_manual_seed_freeze_anchor_derivation_config_v1
+stage: 5D-B1B
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_b1b_seed_freeze_anchor_derivation_only
+
+project_head_expected: 9ab561ce3784a08e0b30c92715810d0016bf7b9a
+
+source_video:
+  path: data/test_clips/sample.mp4
+  expected_bytes: 18842840
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+
+stage5d_b1a_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_manual_seed_selection_package
+  expected_final_status: COMPLETED_STAGE5D_B1A_TARGET_001_MANUAL_SEED_SELECTION_READY
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_B1A_TARGET_001_MANUAL_SEED_PACKAGE_9ab561c.tar.gz
+
+target_definition:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package/target_definition/target_001_definition_frozen.json
+
+stage5d_a_preflight:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_gallery_preflight
+  exclusion_contract: stage5d_gallery_evaluation_exclusion_contract.json
+
+stage5c_closure:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5c_closure
+  policy_json: stage5c_closure_policy.json
+
+upstream:
+  stage5_replay: outputs/reid/full_stage4b_rebuild_r2_stage5_replay
+  segment_view_subdir: segment_view_stage5b3
+  segmented_reid_subdir: segmented_reid_stage5b3
+  canonical_split: outputs/reid/full_stage4b_rebuild_r2_stage5c_clean_split_capacity_balanced
+  baseline_crops_root: outputs/reid/full_stage4b_rebuild_r2/stage4b/crops
+  visibility_universe: outputs/reid/full_stage4b_rebuild_r2_stage5c_visibility_universe
+
+human_selection:
+  target_id: target_001
+  selected_neutral_seed_code: SEED_CANDIDATE_07
+  manual_target_confirmed: "yes"
+  manual_human_verified_number_seen: "yes"
+  manual_crop_valid: "yes"
+  manual_target_dominant: "yes"
+  human_verified_jersey_number: 5
+  jersey_number_provenance: human_visual_verification_not_automated_ocr
+  reviewer: Furkan
+  final_approver: Furkan
+  manual_notes: >-
+    Kullanıcı ve bağımsız görsel inceleme frame 280–305 boyunca
+    SEED_CANDIDATE_07 kodlu sarı oyuncunun aynı kişi olduğunu ve
+    sırtındaki 5 numaranın özellikle frame 285, 290 ve 295 civarında
+    görüldüğünü doğruladı. Etiketin bazı render karelerinde üst üste
+    çizilmesi nedeniyle 077 gibi görünmesi görsel overlay artefaktıdır;
+    canonical nötr kod SEED_CANDIDATE_07’dir.
+
+anchor_derivation:
+  max_candidates: 8
+  min_candidates_for_package: 3
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_seed_freeze_anchor_derivation
