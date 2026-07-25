@@ -1,0 +1,73 @@
+# Stage 5D-F2B — Post-ground-truth retrieval metric feasibility amendment.
+# No similarity, ranking, embedding vector reads, threshold, or gallery mutation.
+schema_version: reid_post_gt_metric_feasibility_amendment_config_v1
+stage: 5D-F2B
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f2b_post_gt_metric_feasibility_amendment_only
+
+project_head_expected: 3245ce3313518d025e12c38ddc934df819a2dc2e
+project_head_message_expected: Freeze target 001 sample ground truth
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+  load_forbidden: true
+
+stage5d_f2a_freeze:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_sample_ground_truth_freeze
+  expected_final_status: COMPLETED_STAGE5D_F2A_TARGET_001_SAMPLE_GROUND_TRUTH_FROZEN
+  expected_reviewed_total: 150
+  expected_segment_positives: 8
+  expected_segment_negatives: 110
+  expected_segment_excluded: 32
+  expected_eligible_total: 118
+  expected_positive_components: 4
+  expected_negative_components: 95
+  expected_excluded_components: 26
+  expected_conflicting_components: 4
+  expected_similarity_rows: 0
+  expected_ranking_rows: 0
+  expected_gallery_members: 7
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F2A_TARGET_001_GT_FREEZE_3245ce3.tar.gz
+  expected_snapshot_sha256: d5db0e4d978ed7677f196f2516fc894f8b4803a09f14f59960a78097ec601504
+
+stage5d_f1_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_validation_design
+  expected_final_status: COMPLETED_STAGE5D_F1_TARGET_001_INDEPENDENT_VALIDATION_DESIGN_READY
+  expected_primary_score: max_individual_cosine
+
+gallery_v1:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v1
+  expected_members: 7
+  npy_load_forbidden: true
+
+policy:
+  amendment_basis: frozen_ground_truth_counts_only
+  similarity_observed: false
+  ranks_observed: false
+  gallery_vectors_read: false
+  sample_vectors_read: false
+  ground_truth_mutated: false
+  gallery_mutated: false
+  threshold_selected: false
+  identity_assignment: false
+  original_scoring_formulas_unchanged: true
+  amended_before_scoring: true
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_post_gt_metric_feasibility_amendment
