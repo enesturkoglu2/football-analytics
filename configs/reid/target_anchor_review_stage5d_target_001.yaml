@@ -1,0 +1,74 @@
+# Stage 5D-B — Target 001 definition + label-blind anchor review package.
+# No gallery membership, similarity ranking, OCR, or identity assignment.
+schema_version: reid_target_anchor_review_config_v1
+stage: 5D-B
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_b_anchor_review_package_only
+
+project_head_expected: b7210155e014463b1592e2a27df4ed7e22b8319c
+
+source_video:
+  path: data/test_clips/sample.mp4
+  expected_bytes: 18842840
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  expected_frames: 1023
+  expected_width: 1336
+  expected_height: 744
+  expected_fps: 30.0
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+
+stage5d_a_preflight:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_gallery_preflight
+  accepted_final_statuses:
+    - COMPLETED_STAGE5D_A_TARGET_GALLERY_PREFLIGHT_READY
+    - COMPLETED_STAGE5D_A_TARGET_GALLERY_PREFLIGHT_READY_COMMIT
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_A_TARGET_GALLERY_PREFLIGHT_b721015.tar.gz
+  # Full SHA resolved dynamically from .sha256 sidecar + manifest; prefix/suffix
+  # checks alone are forbidden as sole validators.
+  snapshot_sha256_prefix: f1e93be7
+  snapshot_sha256_suffix: 58c81c
+
+stage5c_closure:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5c_closure
+  policy_json: stage5c_closure_policy.json
+
+upstream:
+  rebuild_root: outputs/reid/full_stage4b_rebuild_r2
+  stage5_replay: outputs/reid/full_stage4b_rebuild_r2_stage5_replay
+  segmented_reid_subdir: segmented_reid_stage5b3
+  baseline_crops_root: outputs/reid/full_stage4b_rebuild_r2/stage4b/crops
+  visibility_universe: outputs/reid/full_stage4b_rebuild_r2_stage5c_visibility_universe
+  canonical_split: outputs/reid/full_stage4b_rebuild_r2_stage5c_clean_split_capacity_balanced
+
+expected_counts:
+  embedded_segments: 150
+  no_embedding_segments: 141
+  embedding_dimension: 512
+
+target_definition:
+  target_id: target_001
+  target_alias: sarı takım 5 numaralı oyuncu
+  target_description: >-
+    Sarı takım forması giyen ve kullanıcı tarafından 5 numaralı oyuncu
+    olarak görsel biçimde doğrulanan hedef futbolcu.
+  identity_basis: human_visual_verification_from_source_video
+  human_verified_jersey_number: 5
+  jersey_number_provenance: human_verified_by_user_not_automated_ocr
+  reviewer: Furkan
+  final_approver: Furkan
+
+contact_sheets:
+  max_items_per_sheet: 12
+  columns: 4
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package
