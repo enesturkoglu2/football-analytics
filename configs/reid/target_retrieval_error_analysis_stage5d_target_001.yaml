@@ -1,0 +1,90 @@
+# Stage 5D-F3A — Retrieval error analysis and gallery diagnostics.
+# Read-only F3 scores/ranks/GT/gallery. Diagnostic sheets/videos only.
+# No score recompute, gallery mutation, threshold, or identity assignment.
+schema_version: reid_target_retrieval_error_analysis_config_v1
+stage: 5D-F3A
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f3a_retrieval_error_analysis_only
+
+project_head_expected: 27542937d39b80372f4d0f6c92e59d4f168e0e15
+project_head_message_expected: Evaluate target 001 independent retrieval
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  expected_bytes: 18842840
+  decode_allowed_for_diagnostic_render_only: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  load_forbidden: true
+  new_embedding_forbidden: true
+
+stage5d_f3_evaluation:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_retrieval_evaluation
+  expected_final_status: COMPLETED_STAGE5D_F3_TARGET_001_INDEPENDENT_RETRIEVAL_EVALUATED
+  expected_descriptive_outcome: INDEPENDENT_RETRIEVAL_PROMISING_BUT_OVERLAPPING
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3_TARGET_001_RETRIEVAL_EVAL_2754293.tar.gz
+  expected_snapshot_sha256: 8ccbc094b6043cfae1db044c94b1b493fae2351144406d3d47ea7c360633654e
+
+stage5d_f2a_freeze:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_sample_ground_truth_freeze
+
+stage5d_f2_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_sample_ground_truth_review_package
+  mapping_rel: inventory/target_001_sample_evaluation_mapping.jsonl
+
+gallery_v1:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v1
+  expected_members: 7
+  members_jsonl_rel: gallery/target_001_gallery_members.jsonl
+  npy_load_forbidden: true
+
+sample_baseline_crops:
+  path: outputs/reid/full_stage4b_rebuild_r2/stage4b/crops
+
+sample_segmented_reid:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5_replay/segmented_reid_stage5b3
+
+segment_observations:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5_replay/segment_view_stage5b3/segment_observations.jsonl
+
+external_anchor_review_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_anchor_review_package
+
+sample_embeddings:
+  artifact_path: outputs/reid/full_stage4b_rebuild_r2_stage5_replay/segmented_reid_stage5b3/segment_embeddings.npz
+  expected_artifact_sha256: 355676d7e017c3b3b5397bf82e9a088686740fbc495df35598fc90b897d28d97
+  vectors_load_forbidden: true
+
+contact_sheets:
+  min_width_px: 3600
+  max_items_per_sheet: 12
+  grid_cols: 4
+
+diagnostic_videos:
+  fps: 30
+  max_seconds_per_item: 4
+  watermark: "DIAGNOSTIC ONLY — NO THRESHOLD — NO IDENTITY ASSIGNMENT"
+
+policy:
+  sample_used_for_error_analysis_only: true
+  sample_authorized_for_gallery_optimization: false
+  same_sample_revalidation_after_tuning_not_independent: true
+  score_recompute: false
+  gallery_mutation: false
+  threshold_selected: false
+  identity_assignment: false
+  new_embeddings: false
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_retrieval_error_analysis_and_diagnostics
