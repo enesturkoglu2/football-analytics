@@ -1,0 +1,68 @@
+# Stage 5D-B1E-B — External clip YOLO+ByteTrack and seed review package.
+# No OSNet, OCR, similarity, gallery, or automatic target selection.
+schema_version: reid_external_tracking_seed_review_config_v1
+stage: 5D-B1E-B
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_b1e_b_external_tracking_seed_review_only
+
+project_head_expected: 62f8120be63a66adc2627fa178e8de18c10de2fc
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_bytes: 14366504
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+  expected_width: 1332
+  expected_height: 746
+  expected_fps: 30.0
+  expected_frames: 784
+
+eligible_interval:
+  start_frame: 0
+  end_frame: 783
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+
+detection:
+  conf: 0.25
+  iou: 0.70
+  imgsz: 640
+  classes: [0]
+  device: cpu
+
+tracking:
+  tracker_path: configs/tracking/bytetrack_stage3.yaml
+  expected_tracker_sha256: b951014a9ef48b14eb4c13003d2b83c579b260abc9079156c986818898c8549b
+
+stage5d_b1e_a_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_enrollment_preflight
+  expected_final_status: COMPLETED_STAGE5D_B1E_A_EXTERNAL_ENROLLMENT_PREFLIGHT_READY
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_B1E_A_EXTERNAL_PREFLIGHT_62f8120.tar.gz
+  expected_snapshot_sha256: 0a5b53167b5972cf1a92e873c219d4c2a96eb8397017a3c89ff462c25c4fd2a5
+
+stage5d_b1d_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_bridge_review_no_selection_freeze
+
+target_definition:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package/target_definition/target_001_definition_frozen.json
+
+review_inclusion:
+  min_observation_count: 3
+
+visualization:
+  bbox_color_bgr: [0, 220, 255]
+  bbox_thickness: 2
+  label_min_px: 24
+  temporal_stride: 30
+  max_panels_per_temporal_sheet: 7
+  max_candidates_per_index_sheet: 12
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_tracking_seed_review_package
