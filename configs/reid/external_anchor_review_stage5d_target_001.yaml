@@ -1,0 +1,113 @@
+# Stage 5D-B1E-D — External tracklet quality + bounded anchor crop review package.
+# Uses only frozen EXT_004 / EXT_183 / EXT_198. No OSNet, OCR, similarity, or auto-approval.
+schema_version: reid_external_anchor_review_config_v1
+stage: 5D-B1E-D
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_b1e_d_external_anchor_review_only
+
+project_head_expected: 845cfab623a5f58ae31672d505575360593733e0
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_bytes: 14366504
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+  expected_width: 1332
+  expected_height: 746
+  expected_fps: 30.0
+  expected_frames: 784
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+
+stage5d_b1e_c_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_occurrence_freeze
+  expected_final_status: COMPLETED_STAGE5D_B1E_C_TARGET_001_EXTERNAL_OCCURRENCES_FROZEN
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_B1E_C_TARGET_001_OCCURRENCE_FREEZE_845cfab.tar.gz
+  expected_snapshot_sha256: fdcbd5e75d22144d4cea7fe3c8b616bf49dff9e49c33c2b5aba440014634f685
+
+stage5d_b1e_b_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_tracking_seed_review_package
+  expected_detection_total: 8355
+  expected_detection_frames_with_boxes: 784
+  expected_tracking_observations: 7796
+  expected_raw_track_count: 248
+
+stage5d_b1e_a_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_enrollment_preflight
+
+target_definition:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package/target_definition/target_001_definition_frozen.json
+
+selected_occurrences:
+  - external_candidate_code: EXT_004
+    raw_track_id: 11
+    first_frame: 0
+    last_frame: 186
+    observation_count: 185
+    representative_frame: 123
+    temporal_buckets:
+      - early
+      - early-middle
+      - middle
+      - late-middle
+      - late
+      - representative-support
+  - external_candidate_code: EXT_183
+    raw_track_id: 388
+    first_frame: 456
+    last_frame: 499
+    observation_count: 44
+    representative_frame: 456
+    temporal_buckets:
+      - early
+      - middle
+      - late
+      - representative-support
+  - external_candidate_code: EXT_198
+    raw_track_id: 450
+    first_frame: 511
+    last_frame: 783
+    observation_count: 272
+    representative_frame: 594
+    temporal_buckets:
+      - early
+      - early-middle
+      - middle
+      - late-middle
+      - late
+      - representative-support
+
+crop_extraction:
+  padding_fraction: 0.05
+  max_padding_fraction: 0.05
+  image_format: png
+
+hard_quality:
+  min_crop_height_px: 64
+  min_crop_width_px: 20
+  min_bbox_area_px2: 1500
+  max_edge_clipping_fraction: 0.20
+  max_person_iou: 0.35
+
+selection:
+  max_candidates_per_occurrence: 6
+  max_total_candidates: 18
+  min_desired_per_occurrence: 3
+  min_frame_gap: 12
+  near_duplicate_dhash_hamming_max: 8
+  dhash_size: 8
+  representative_support_half_window: 15
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_anchor_review_package
