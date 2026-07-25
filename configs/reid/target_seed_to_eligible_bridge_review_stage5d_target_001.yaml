@@ -1,0 +1,87 @@
+# Stage 5D-B1C2 — Frozen seed to eligible source temporal bridge review.
+# Frozen SEED_CANDIDATE_07 is visual continuity only; not enrollment/scoring.
+schema_version: reid_target_seed_to_eligible_bridge_review_config_v1
+stage: 5D-B1C2
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_b1c2_seed_to_eligible_bridge_review_only
+
+project_head_expected: 5112e2912b7272fc2c876a26d59d601faf462d28
+
+source_video:
+  path: data/test_clips/sample.mp4
+  expected_bytes: 18842840
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  expected_frames: 1023
+  expected_width: 1336
+  expected_height: 744
+  expected_fps: 30.0
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+
+stage5d_b1b_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_seed_freeze_anchor_derivation
+  expected_final_status: COMPLETED_STAGE5D_B1B_SEED_FROZEN_SOURCE_INELIGIBLE
+  expected_selected_seed: SEED_CANDIDATE_07
+  expected_segment_id: raw_222_full
+  expected_raw_track_id: 222
+  expected_eligibility: frozen_identity_seed_only_stage5c_excluded
+
+stage5d_b1c_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_alternate_eligible_source_review
+  expected_final_status: COMPLETED_STAGE5D_B1C_NO_ELIGIBLE_SOURCE_IN_EARLY_WINDOW
+  expected_review_window: [30, 75]
+  expected_eligible: 0
+  expected_ineligible: 25
+
+target_definition:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package/target_definition/target_001_definition_frozen.json
+
+stage5d_b_anchor_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package
+  inventory: inventory/target_001_anchor_candidate_inventory.jsonl
+
+stage5d_a_preflight:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_gallery_preflight
+  exclusion_contract: stage5d_gallery_evaluation_exclusion_contract.json
+
+stage5c_closure:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5c_closure
+  policy_json: stage5c_closure_policy.json
+
+upstream:
+  stage5_replay: outputs/reid/full_stage4b_rebuild_r2_stage5_replay
+  segment_view_subdir: segment_view_stage5b3
+  segmented_reid_subdir: segmented_reid_stage5b3
+  canonical_split: outputs/reid/full_stage4b_rebuild_r2_stage5c_clean_split_capacity_balanced
+  baseline_crops_root: outputs/reid/full_stage4b_rebuild_r2/stage4b/crops
+  visibility_universe: outputs/reid/full_stage4b_rebuild_r2_stage5c_visibility_universe
+
+bridge_window:
+  start_frame: 280
+  end_frame: 420
+  sheet_01_targets: [280, 290, 300, 310, 320]
+  sheet_02_targets: [330, 340, 350, 360, 370]
+  sheet_03_targets: [380, 390, 394, 397, 400, 410, 420]
+
+frozen_seed_forbidden:
+  selected_neutral_seed_code: SEED_CANDIDATE_07
+  segment_id: raw_222_full
+  raw_track_id: 222
+  visual_label: FROZEN_HUMAN_SEED_REF
+  visual_warning: "NOT ENROLLABLE — HUMAN CONTINUITY REFERENCE ONLY"
+
+visualization:
+  frozen_bbox_color_bgr: [0, 140, 255]
+  eligible_bbox_color_bgr: [0, 220, 255]
+  bbox_thickness: 2
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_seed_to_eligible_bridge_review
