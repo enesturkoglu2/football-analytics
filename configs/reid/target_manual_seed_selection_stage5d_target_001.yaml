@@ -1,0 +1,66 @@
+# Stage 5D-B1A — Target 001 manual seed selection package.
+# Neutral review only: no seed selection, anchor freeze, or gallery membership.
+schema_version: reid_target_manual_seed_selection_config_v1
+stage: 5D-B1A
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_b1a_manual_seed_selection_only
+
+project_head_expected: d6ef4af989e05f961bc6b81dbdc9540bc13f60ad
+
+source_video:
+  path: data/test_clips/sample.mp4
+  expected_bytes: 18842840
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  expected_frames: 1023
+  expected_width: 1336
+  expected_height: 744
+  expected_fps: 30.0
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+
+target_definition:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package/target_definition/target_001_definition_frozen.json
+  expected_target_id: target_001
+  expected_alias: sarı takım 5 numaralı oyuncu
+  expected_identity_basis: human_visual_verification_from_source_video
+  expected_jersey_number: 5
+  expected_jersey_provenance: human_verified_by_user_not_automated_ocr
+
+stage5d_roots:
+  stage5d_a: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_gallery_preflight
+  stage5d_b: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package
+  stage5d_b1: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_temporal_context_review_package
+
+stage5c_closure:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5c_closure
+  policy_json: stage5c_closure_policy.json
+
+upstream:
+  rebuild_root: outputs/reid/full_stage4b_rebuild_r2
+  documented_link_overlay: outputs/reid/full_stage4b_rebuild_r2_documented_link_overlay
+  stage5_replay: outputs/reid/full_stage4b_rebuild_r2_stage5_replay
+  segment_view_subdir: segment_view_stage5b3
+  segmented_reid_subdir: segmented_reid_stage5b3
+  canonical_split: outputs/reid/full_stage4b_rebuild_r2_stage5c_clean_split_capacity_balanced
+  baseline_crops_root: outputs/reid/full_stage4b_rebuild_r2/stage4b/crops
+
+seed_window:
+  representative_frame: 290
+  start_frame: 280
+  end_frame: 310
+  sheet_target_frames: [280, 285, 290, 295, 300, 305, 310]
+
+visualization:
+  bbox_color_bgr: [0, 220, 255]
+  bbox_thickness: 2
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_manual_seed_selection_package
