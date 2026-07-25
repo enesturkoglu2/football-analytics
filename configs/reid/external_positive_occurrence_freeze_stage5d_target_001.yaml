@@ -1,0 +1,83 @@
+# Stage 5D-B1E-C — Freeze human-verified external positive occurrences.
+# Positive-only scope. No crops, embeddings, gallery, OCR, or similarity.
+schema_version: reid_external_positive_occurrence_freeze_config_v1
+stage: 5D-B1E-C
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_b1e_c_external_positive_occurrence_freeze_only
+
+project_head_expected: 7cf2ba3e9aaf90c4778d5cb6a8bf4a8cb899c0a6
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_bytes: 14366504
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+
+stage5d_b1e_b_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_tracking_seed_review_package
+  expected_final_status: COMPLETED_STAGE5D_B1E_B_EXTERNAL_TRACKING_SEED_REVIEW_READY
+  expected_detection_total: 8355
+  expected_detection_frames_with_boxes: 784
+  expected_tracking_observations: 7796
+  expected_raw_track_count: 248
+  expected_ext_candidate_count: 248
+  expected_review_eligible_count: 138
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_B1E_B_EXTERNAL_TRACKING_7cf2ba3.tar.gz
+
+stage5d_b1e_a_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_enrollment_preflight
+  expected_final_status: COMPLETED_STAGE5D_B1E_A_EXTERNAL_ENROLLMENT_PREFLIGHT_READY
+
+target_definition:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package/target_definition/target_001_definition_frozen.json
+
+human_positive_occurrence_freeze:
+  target_id: target_001
+  review_scope: positive_occurrence_selection_only
+  selected_external_candidate_codes:
+    - EXT_004
+    - EXT_183
+    - EXT_198
+  manual_occurrence_decision: target_occurrence_yes
+  manual_same_target_as_target_001: "yes"
+  manual_human_verified_number_seen: "yes"
+  manual_crop_valid: "yes"
+  manual_target_dominant: "yes"
+  manual_identity_continuity_observed: "yes"
+  reviewer: Furkan
+  final_approver: Furkan
+  shared_manual_notes: >-
+    External enrollment videosunun insan incelemesinde sarı takımın
+    5 numaralı oyuncusu başlangıçta EXT_004 olarak görülmüştür.
+    Oyuncu kadrajdan çıktıktan veya ByteTrack zinciri koptuktan sonra
+    aynı gerçek oyuncu EXT_183 ve EXT_198 kodlarıyla tekrar görülmüştür.
+    Üç occurrence'ta da 5 numarası doğal video görüntüsünde insan gözüyle
+    doğrulanmıştır. Otomatik OCR, similarity veya model identity
+    prediction kullanılmamıştır.
+  per_code_notes:
+    EXT_004: >-
+      external klibin başlangıç occurrence'ı;
+      insan doğrulamalı 5 numara görülüyor
+    EXT_183: >-
+      daha sonraki ayrı ByteTrack occurrence'ı;
+      aynı hedef oyuncu ve 5 numara insan gözüyle doğrulanıyor
+    EXT_198: >-
+      sonraki uzun occurrence;
+      aynı hedef oyuncu birçok kare boyunca görülüyor;
+      5 numara insan gözüyle doğrulanıyor
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_occurrence_freeze
