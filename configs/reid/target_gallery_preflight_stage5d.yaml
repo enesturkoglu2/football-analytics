@@ -1,0 +1,83 @@
+# Stage 5D-A — Target gallery enrollment design and asset preflight.
+# Design/preflight only: no target selection, gallery membership,
+# identity assignment, prototype, ranking, or model inference.
+schema_version: reid_target_gallery_preflight_config_v1
+stage: 5D-A
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_a_preflight_only
+
+project_head_expected: 87b92366d7841994bcbb93eed20bc3c51e1e1a8f
+
+source_video:
+  path: data/test_clips/sample.mp4
+  expected_bytes: 18842840
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  expected_frames: 1023
+  expected_width: 1336
+  expected_height: 744
+  expected_fps: 30.0
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+
+stage5c_closure:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5c_closure
+  policy_json: stage5c_closure_policy.json
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_R8A_STAGE5C_CLOSURE_87b9236.tar.gz
+  snapshot_sha256: ff43cc5f75ff9c87c96c27473549d48a18afc562609bcdf87d9beb6c1b052f6f
+
+upstream:
+  rebuild_root: outputs/reid/full_stage4b_rebuild_r2
+  documented_link_overlay: outputs/reid/full_stage4b_rebuild_r2_documented_link_overlay
+  stage5_replay: outputs/reid/full_stage4b_rebuild_r2_stage5_replay
+  visibility_universe: outputs/reid/full_stage4b_rebuild_r2_stage5c_visibility_universe
+  canonical_split: outputs/reid/full_stage4b_rebuild_r2_stage5c_clean_split_capacity_balanced
+  segmented_reid_subdir: segmented_reid_stage5b3
+  segment_view_subdir: segment_view_stage5b3
+
+expected_counts:
+  frames: 1023
+  tracking_observations: 13309
+  raw_track_ids: 276
+  initial_crops: 454
+  initial_embeddings: [454, 512]
+  aggregated_units: 135
+  initial_candidate_pairs: 9045
+  replayed_documented_links: 4
+  replayed_global_ids: 272
+  final_segment_plan_total: 291
+  manual_segments: 28
+  pass_through_segments: 261
+  assigned_observations: 13301
+  unassigned_observations: 8
+  embedded_segments: 150
+  no_embedding_segments: 141
+  recomputed_embedded_segments: 28
+  reused_embedded_segments: 122
+  new_segment_crops: 75
+  segmented_candidate_pairs: 9507
+  visibility_universe_items: 474
+
+gallery_policy:
+  enrollment_mode: manual_frozen
+  automatic_gallery_growth: false
+  self_training: false
+  pseudo_label_enrollment: false
+  ocr_based_automatic_enrollment: false
+  tracker_id_based_automatic_enrollment: false
+  similarity_based_automatic_enrollment: false
+  appearance_reid_primary: true
+  unknown_identity_preserved: true
+  forced_identity_assignment: false
+  jersey_roi_forbidden_for_gallery: true
+  stage5c_items_not_gallery_or_evaluation_inputs: true
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_gallery_preflight

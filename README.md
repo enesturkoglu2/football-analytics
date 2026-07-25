@@ -64,23 +64,23 @@ Tamamlananlar:
 - [x] Holdout-primary PARSeq fixed-gate validation (REBUILD-R8;
       `INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`)
 - [x] Stage 5C closure / automated jersey fusion policy (REBUILD-R8A)
+- [x] Stage 5D-A target gallery enrollment design + asset preflight
+      (no target/gallery/identity yet)
 
 Henüz yapılmayanlar:
 
-- [ ] Target enrollment / gallery memory (Stage 5D)
+- [ ] Stage 5D-B target definition + anchor review package
+- [ ] Stage 5D-C..F gallery enrollment / prototypes / validation
 - [ ] Evidence fusion evaluation (Stage 5E; automated PARSeq jersey
       diagnostic-only — fusion’a giremez)
 - [ ] Spatial continuity / pitch position (Stage 6)
 
-DBNet/SAR ailesi C2 sonrası kapalıdır. Stage 5C automated PARSeq
-jersey kanalı **diagnostic-only** kapatıldı; Stage 5E fusion /
-identity assignment / veto / gallery enrollment için kullanılamaz.
-Discovery candidate cut (`0.99992299168434329`) yalnız provenance
-için saklanır; **active deployment threshold değildir**. Holdout
-üzerinde threshold retune yapılmadı. R8: raw exact/wrong=5/11;
-negative emission=30/30; fixed-gate accepted exact/wrong/neg=0/0/0.
-Stage 5C **closed**. Sıradaki kapı:
-**STAGE5D-A_TARGET_GALLERY_ENROLLMENT_DESIGN_AND_PREFLIGHT**.
+Stage 5C **closed** (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`). Automated
+PARSeq jersey kanalı Stage 5E için **diagnostic-only**. Active stage:
+**Stage 5D**. Stage 5D-A preflight tamam; target henüz seçilmedi,
+gallery membership=0, identity assignment yok. Appearance ReID birincil.
+Sıradaki kapı:
+**STAGE5D-B_TARGET_DEFINITION_AND_ANCHOR_REVIEW_PACKAGE**.
 Checkpoint/asset'ler Git'e commit edilmez.
 
 ## Geliştirme ortamları
@@ -113,6 +113,8 @@ Aktivasyon:
   — Discovery-primary PARSeq candidate gate (r2; not deployment)
 - [docs/setup/stage5c-holdout-parseq-validation-and-closure-r2.md](docs/setup/stage5c-holdout-parseq-validation-and-closure-r2.md)
   — Holdout validation + Stage 5C closure (inconclusive safe low support)
+- [docs/setup/stage5d-target-gallery-enrollment-design-and-preflight.md](docs/setup/stage5d-target-gallery-enrollment-design-and-preflight.md)
+  — Stage 5D-A target gallery design + asset preflight
 - [docs/setup/stage5c-jersey-pilot-results.md](docs/setup/stage5c-jersey-pilot-results.md)
   — 78-item manuel jersey pilot sonuçları (historical; not r2 annotation set)
 - [docs/setup/stage5c-jersey-mmocr-baseline-results.md](docs/setup/stage5c-jersey-mmocr-baseline-results.md)

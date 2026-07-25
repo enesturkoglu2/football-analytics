@@ -35,15 +35,18 @@
   (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`; accepted 0/0/0)
 - **REBUILD-R8A Stage 5C closure:** completed
   (automated jersey fusion = diagnostic-only)
+- **STAGE5D-A target gallery design/preflight:** completed
+  (target not selected; gallery members=0; identity assignment=0)
 - **Next technical gate:**
-  `STAGE5D-A_TARGET_GALLERY_ENROLLMENT_DESIGN_AND_PREFLIGHT`
-- **Focused target-player gate:** Stage 5D
+  `STAGE5D-B_TARGET_DEFINITION_AND_ANCHOR_REVIEW_PACKAGE`
+- **Focused target-player gate:** Stage 5D (active)
 - **Pitch-position / GameState:** Stage 6 (separate from Stage 5)
 - **Recovery / design docs:**
   [rebuild-r2-stage4b-stage5-recovery.md](rebuild-r2-stage4b-stage5-recovery.md),
   [stage5c-clean-discovery-holdout-design.md](stage5c-clean-discovery-holdout-design.md),
   [stage5c-discovery-parseq-candidate-gate-r2.md](stage5c-discovery-parseq-candidate-gate-r2.md),
-  [stage5c-holdout-parseq-validation-and-closure-r2.md](stage5c-holdout-parseq-validation-and-closure-r2.md)
+  [stage5c-holdout-parseq-validation-and-closure-r2.md](stage5c-holdout-parseq-validation-and-closure-r2.md),
+  [stage5d-target-gallery-enrollment-design-and-preflight.md](stage5d-target-gallery-enrollment-design-and-preflight.md)
 - **Identity-signals policy:** `configs/reid/identity_signals_stage5.yaml`
 - **Crop-quality policy:** `configs/reid/crop_quality_policy_stage5a.yaml`
 - **Kit measurement config:** `configs/reid/kit_descriptor_stage5b.yaml`
@@ -273,7 +276,8 @@ Rules:
 | **REBUILD-R7** | holdout primary annotation freeze | completed (reserve closed) |
 | **REBUILD-R8** | holdout fixed-gate validation | completed (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`) |
 | **REBUILD-R8A** | Stage 5C closure / diagnostic-only jersey policy | completed |
-| **5D-A** | target gallery enrollment design / preflight | next |
+| **5D-A** | target gallery enrollment design / preflight | completed (no target/gallery yet) |
+| **5D-B** | target definition + anchor review package | next |
 | **5C-D** | tracklet-level multi-frame jersey aggregation | deferred / not active for Stage 5E fusion |
 | **5D** | focused target-player enrollment and gallery design (`target_A` / `target_B` / `non_target` / `unknown`) | pending |
 | **5E** | pair-level auxiliary evidence fusion and manual-review ranking | pending |
@@ -423,11 +427,12 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
 - REBUILD-R5..R8A: discovery/holdout annotation, PARSeq candidate gate,
   holdout validation (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`), and
   Stage 5C closure complete (automated jersey = diagnostic-only)
+- STAGE5D-A: target gallery design/preflight complete (target not
+  selected; gallery members=0; identity assignment inactive)
 - Next technical gate:
-  **`STAGE5D-A_TARGET_GALLERY_ENROLLMENT_DESIGN_AND_PREFLIGHT`**
-- Discovery cut retained for provenance only; not deployment /
-  Stage 5E fusion threshold; Stage 5D/5E/6 scopes continue with
-  appearance-primary identity policy
+  **`STAGE5D-B_TARGET_DEFINITION_AND_ANCHOR_REVIEW_PACKAGE`**
+- Appearance ReID primary; automated jersey diagnostic-only for
+  Stage 5E; unknown identity preserved; no automatic gallery growth
 
 ### Stage 5C-A handoff (completed)
 
@@ -480,7 +485,9 @@ The retained downstream order is:
   (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`; accepted 0/0/0);
 - **REBUILD-R8A (completed):** Stage 5C closed; automated jersey
   diagnostic-only for Stage 5E;
-- **Stage 5D-A (next):** target gallery enrollment design / preflight;
+- **Stage 5D-A (completed):** gallery design/preflight; target not
+  selected; gallery members=0;
+- **Stage 5D-B (next):** target definition + anchor review package;
 - **Stage 5C-D:** deferred relative to Stage 5E fusion path;
 - **Stage 5D:** target-player enrollment/gallery memory;
 - **Stage 5E:** evidence fusion and golden evaluation; and
@@ -592,8 +599,9 @@ Stage 5C-C2 completed a controlled recognizer/preprocessing ablation:
 - Next after C3E historical path was independent holdout design;
   under rebuild r2 this is superseded by the clean
   capacity-balanced split (`r2_capacity_balanced`), R5–R8A holdout
-  validation, and Stage 5C closure; next gate is
-  **STAGE5D-A target gallery enrollment design / preflight**
+  validation, and Stage 5C closure; Stage 5D-A preflight complete;
+  next gate is
+  **STAGE5D-B target definition + anchor review package**
 - Legibility classifier remains a future helper-gate candidate
 
 ### Rebuild r2 clean discovery/holdout notes
@@ -608,7 +616,8 @@ Stage 5C-C2 completed a controlled recognizer/preprocessing ablation:
   [rebuild-r2-stage4b-stage5-recovery.md](rebuild-r2-stage4b-stage5-recovery.md),
   [stage5c-clean-discovery-holdout-design.md](stage5c-clean-discovery-holdout-design.md),
   [stage5c-discovery-parseq-candidate-gate-r2.md](stage5c-discovery-parseq-candidate-gate-r2.md),
-  [stage5c-holdout-parseq-validation-and-closure-r2.md](stage5c-holdout-parseq-validation-and-closure-r2.md)
+  [stage5c-holdout-parseq-validation-and-closure-r2.md](stage5c-holdout-parseq-validation-and-closure-r2.md),
+  [stage5d-target-gallery-enrollment-design-and-preflight.md](stage5d-target-gallery-enrollment-design-and-preflight.md)
 - Old C3F-A holdout triad retained for history/tests;
   `must_not_be_used_for_new_r2_annotation=true`
 - R5: discovery-primary annotated; reserve closed
@@ -618,7 +627,8 @@ Stage 5C-C2 completed a controlled recognizer/preprocessing ablation:
 - R7/R8: holdout annotated + validated
   (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`; accepted exact/wrong/neg=0/0/0)
 - R8A: Stage 5C closed; automated PARSeq jersey diagnostic-only
-- Next: STAGE5D-A target gallery enrollment design / preflight
+- Stage 5D-A: gallery preflight ready; target/gallery not created
+- Next: STAGE5D-B target definition + anchor review package
 
 ### Stage 5B3 guardrails (retained)
 

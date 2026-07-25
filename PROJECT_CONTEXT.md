@@ -141,17 +141,16 @@ Ana dal:
 
     94daa9e Create project foundation and record environment
 
-Güncel durum (REBUILD-R8A Stage 5C closure / documentation commit):
+Güncel durum (STAGE5D-A target gallery preflight commit):
 
-- pre-commit HEAD: `17c1c67559da34ae430a04cda7c8335d0eded533`
-- documentation/application commit: this REBUILD-R8A commit
+- pre-commit HEAD: `87b92366d7841994bcbb93eed20bc3c51e1e1a8f`
+- documentation/application commit: this STAGE5D-A commit
   (hash after push; reported in the final gate report)
 - `main == origin/main` after push
-- tracked scope: three holdout-validation source/config/test files +
-  one new closure doc + five updated docs (exact 9 files)
+- tracked scope: three preflight source/config/test files + one new
+  design doc + three updated docs (exact 7 files)
 - sistem CPU-only'dir
-- generated rebuild / annotation / gate / closure outputs remain
-  Git-ignored
+- generated Stage 5D preflight outputs remain Git-ignored
 
 ## 6. Proje klasörleri
 
@@ -483,36 +482,30 @@ yüklenmedi):
 Güncel durum:
 
 - **Stage 5C status:** `closed` (REBUILD-R8A)
-- **Holdout validation decision:**
-  `INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`
-- Canonical split generation: `r2_capacity_balanced`
-- Discovery candidate cut retained for provenance only:
-  `0.99992299168434329` (`>=`) — **not** active deployment /
-  Stage 5E fusion threshold
-- R8 fixed-gate accepted exact/wrong/negative/uncertain = **0/0/0/0**
-- Raw holdout PARSeq: exact/wrong=5/11; negative emission=30/30
-- Threshold unchanged after holdout; no retune/retrain
-- Holdout/discovery reserves closed
-- Automated PARSeq jersey evidence for Stage 5E:
-  **`diagnostic_only`** (no fusion / identity / veto / enrollment)
-- Appearance ReID remains primary; unknown identity preserved
+- **Active stage:** Stage 5D
+- **Stage 5D-A:** target gallery design + asset preflight complete
+  - target not selected; gallery members=0; identity assignment=0
+  - automatic gallery growth=false; unknown preserved
+  - existing OSNet 150 embedded / 141 no-embedding verified
+- Automated PARSeq jersey for Stage 5E: **`diagnostic_only`**
+- Appearance ReID remains primary
 - **Sıradaki kapı:**
-  `STAGE5D-A_TARGET_GALLERY_ENROLLMENT_DESIGN_AND_PREFLIGHT`
+  `STAGE5D-B_TARGET_DEFINITION_AND_ANCHOR_REVIEW_PACKAGE`
 
 Docs:
 
-- `docs/setup/rebuild-r2-stage4b-stage5-recovery.md`
-- `docs/setup/stage5c-clean-discovery-holdout-design.md`
-- `docs/setup/stage5c-discovery-parseq-candidate-gate-r2.md`
 - `docs/setup/stage5c-holdout-parseq-validation-and-closure-r2.md`
+- `docs/setup/stage5d-target-gallery-enrollment-design-and-preflight.md`
 
 Planlanan sıra:
 
-1. Stage 5D-A target gallery enrollment design / preflight
-2. Stage 5D gallery freeze (appearance-driven; no automated PARSeq
-   jersey enrollment)
-3. Stage 5E evidence fusion (automated PARSeq jersey diagnostic-only)
-4. Stage 6 spatial continuity / pitch position
+1. Stage 5D-B target definition + anchor review package
+2. Stage 5D-C bounded candidate retrieval + human decisions
+3. Stage 5D-D enrollment freeze
+4. Stage 5D-E prototypes (no identity assignment)
+5. Stage 5D-F independent validation / Stage 5E readiness
+6. Stage 5E evidence fusion (automated PARSeq jersey diagnostic-only)
+7. Stage 6 spatial continuity / pitch position
 
 ## 9. Cursor için zorunlu kurallar
 
@@ -648,28 +641,14 @@ Sınırlar:
 
 ## 11. Mevcut öncelik
 
-Stage 5C kapatıldı (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`). Automated
-PARSeq jersey Stage 5E fusion için diagnostic-only. Discovery cut
-yalnız provenance. Sıradaki kapı
-**STAGE5D-A_TARGET_GALLERY_ENROLLMENT_DESIGN_AND_PREFLIGHT**:
+Stage 5C closed. Stage 5D-A preflight ready (target/gallery/identity
+henüz yok). Sıradaki kapı
+**STAGE5D-B_TARGET_DEFINITION_AND_ANCHOR_REVIEW_PACKAGE**:
 
-    Video okuma
-    → İnsan/oyuncu tespiti (tamamlandı)
-    → ByteTrack geçici takip (tamamlandı; fragmented)
-    → ReID altyapı hazırlığı (4A tamamlandı)
-    → Track-level ReID / linking baseline (4B tamamlandı)
-    → Crop quality / kit / purity / segmentation (5A-5B tamamlandı)
-    → Jersey visibility + 78-item manuel pilot (5C-A historical;
-      not r2 annotation set)
-    → MMOCR environment + DBNet/SAR asset (5C-B tamamlandı)
-    → Offline CPU jersey OCR baseline smoke (5C-C1 tamamlandı)
-    → Controlled ablation (5C-C2 tamamlandı; no exact signal;
-      DBNet/SAR family closed)
-    → PARSeq capability / env / checkpoint / smoke / FP audit
-      (5C-C3A–E tamamlandı; C3E threshold not reused)
-    → Rebuild r2 clean split + discovery gate + holdout validation
-      (R4–R8 tamamlandı; R8A Stage 5C closed)
-    → Target gallery enrollment design (Stage 5D-A — sıradaki)
+    … → Stage 5C closed (R8A; jersey diagnostic-only)
+    → Stage 5D-A gallery design/preflight (tamamlandı)
+    → Target definition + anchor review (5D-B — sıradaki)
+    → Enrollment freeze / prototypes / validation (5D-C..F)
     → Evidence fusion (5E; automated PARSeq jersey diagnostic-only)
     → Spatial continuity (Stage 6)
 
