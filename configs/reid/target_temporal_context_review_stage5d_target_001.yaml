@@ -1,0 +1,74 @@
+# Stage 5D-B1 — Target 001 temporal context review package.
+# Visual context only: no decisions, gallery, OCR, similarity, or new inference.
+schema_version: reid_target_temporal_context_review_config_v1
+stage: 5D-B1
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_b1_temporal_context_only
+
+project_head_expected: 0f24ec7ab1df81f6681b87f901fc458c6cdc62d5
+
+source_video:
+  path: data/test_clips/sample.mp4
+  expected_bytes: 18842840
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  expected_frames: 1023
+  expected_width: 1336
+  expected_height: 744
+  expected_fps: 30.0
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+
+stage5d_b_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package
+  expected_final_status: COMPLETED_STAGE5D_B_TARGET_001_ANCHOR_REVIEW_PACKAGE_READY
+  expected_candidate_ids:
+    - target_001_anchor_001
+    - target_001_anchor_002
+    - target_001_anchor_003
+    - target_001_anchor_004
+    - target_001_anchor_005
+    - target_001_anchor_006
+    - target_001_anchor_007
+    - target_001_anchor_008
+    - target_001_anchor_009
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_B_TARGET_001_ANCHOR_PACKAGE_0f24ec7.tar.gz
+
+stage5d_a_preflight:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_gallery_preflight
+
+stage5c_closure:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5c_closure
+  policy_json: stage5c_closure_policy.json
+
+upstream:
+  stage5_replay: outputs/reid/full_stage4b_rebuild_r2_stage5_replay
+  segment_view_subdir: segment_view_stage5b3
+  segmented_reid_subdir: segmented_reid_stage5b3
+
+temporal_window:
+  max_frames_before: 60
+  max_frames_after: 60
+  # Approximate ±2s at 30fps; hard-clamped to segment observation range.
+  target_offsets_from_representative:
+    - -40
+    - -20
+    - 0
+    - 20
+    - 40
+  max_sheet_observations: 7
+
+visualization:
+  zoom_padding_ratio: 0.15
+  bbox_color_bgr: [0, 220, 255]
+  bbox_thickness: 2
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_temporal_context_review_package
