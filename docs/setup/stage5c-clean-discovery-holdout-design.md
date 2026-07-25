@@ -7,8 +7,11 @@
 - **Discovery annotation:** REBUILD-R5 complete (reserve closed)
 - **Discovery PARSeq candidate gate:** REBUILD-R6 complete
   (cut `0.99992299168434329`; support=1; not deployment)
+- **Holdout annotation + validation:** REBUILD-R7/R8 complete
+  (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`; accepted 0/0/0)
+- **Stage 5C closure:** REBUILD-R8A complete (diagnostic-only jersey)
 - **Exact next gate:**
-  `REBUILD-R7_STAGE5C_HOLDOUT_PRIMARY_ANNOTATION_FREEZE`
+  `STAGE5D-A_TARGET_GALLERY_ENROLLMENT_DESIGN_AND_PREFLIGHT`
 
 This design is **label-blind** and **prediction-blind**. It does not
 reuse the historical 78-item pilot as an annotation set and does not
@@ -262,12 +265,9 @@ Preserved but superseded holdout-design triad:
 
 ## 19. Exact next gate
 
-`REBUILD-R7_STAGE5C_HOLDOUT_PRIMARY_ANNOTATION_FREEZE`
+`STAGE5D-A_TARGET_GALLERY_ENROLLMENT_DESIGN_AND_PREFLIGHT`
 
-Until then / during R7:
-
-- do not retune the frozen discovery candidate cut after holdout
-  results
-- do not open/review holdout packages before the approved gate
-- do not treat the candidate cut as a deployment threshold
-- discovery reserve remains closed for threshold search
+Stage 5C is closed. Automated PARSeq jersey evidence is
+diagnostic-only for Stage 5E. Do not reopen the current holdout for
+threshold retune. Do not treat the discovery cut as a deployment
+threshold.

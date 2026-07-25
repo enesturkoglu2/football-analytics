@@ -2,14 +2,18 @@
 
 - **Gate freeze:** REBUILD-R6A
 - **Inference / derivation gate:** REBUILD-R6
+- **Holdout validation:** REBUILD-R8
+  (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`; accepted exact/wrong/neg=0/0/0)
+- **Stage 5C closure:** REBUILD-R8A
 - **Canonical split generation:** `r2_capacity_balanced`
 - **Exact next gate:**
-  `REBUILD-R7_STAGE5C_HOLDOUT_PRIMARY_ANNOTATION_FREEZE`
+  `STAGE5D-A_TARGET_GALLERY_ENROLLMENT_DESIGN_AND_PREFLIGHT`
 
 **This result does not prove general model accuracy.**  
 The derived cut is an **independent holdout-validation candidate
 only**. It is **not** a deployment threshold and **not** a calibrated
-probability.
+probability. After R8, the cut remains provenance-only: it produced
+**no** holdout acceptances (exact or false) under the frozen operator.
 
 ## 1. Provenance roots
 
@@ -173,7 +177,9 @@ not drive the r2 discovery/holdout protocol.
 
 ## 11. Exact next gate
 
-`REBUILD-R7_STAGE5C_HOLDOUT_PRIMARY_ANNOTATION_FREEZE`
+`STAGE5D-A_TARGET_GALLERY_ENROLLMENT_DESIGN_AND_PREFLIGHT`
 
-Holdout may open only because a candidate gate was successfully
-frozen; the cut itself must not be retuned after holdout results.
+Holdout validation completed as `INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`
+(REBUILD-R8). The discovery cut must not be retuned on the current
+holdout and is not active for Stage 5E fusion. See
+[stage5c-holdout-parseq-validation-and-closure-r2.md](stage5c-holdout-parseq-validation-and-closure-r2.md).

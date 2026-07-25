@@ -1,0 +1,70 @@
+# Stage 5C rebuild-r2 holdout-primary PARSeq fixed-gate validation.
+# Applies frozen discovery candidate gate unchanged; no threshold retune.
+schema_version: reid_jersey_parseq_holdout_validation_config_v1
+stage: 5C-R8
+device: cpu
+offline_required: true
+expected_item_count: 48
+color_convention: bgr_to_rgb
+roi_source: clean_universe_canonical_number_roi
+roi_padding: 0
+
+project_head_expected: 17c1c67559da34ae430a04cda7c8335d0eded533
+
+canonical_split:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5c_clean_split_capacity_balanced
+  generation: r2_capacity_balanced
+  listing_sha256: 2ae8f486157bf8ee4cf1c64be5601e45ad04b228f439d5ac1d99d476f79b369e
+  holdout_primary_manifest: holdout_primary/holdout_primary_manifest.jsonl
+
+annotation_freeze:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5c_holdout_primary_annotation_freeze
+  frozen_csv: holdout_primary_annotations_frozen.csv
+
+discovery_gate:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5c_discovery_primary_parseq_gate
+  candidate_gate_json: gate_derivation/discovery_candidate_gate.json
+  preprocessing_contract_json: runtime/preprocessing_contract_pre_inference.json
+  # Cut is loaded from candidate_gate_json; do not hardcode a rounded float here.
+
+clean_universe_items: outputs/reid/full_stage4b_rebuild_r2_stage5c_visibility_universe/clean_review_universe/clean_review_items.jsonl
+
+parseq_root: /home/enesturkoglu2/projects/external/jersey-number-pipeline/str/parseq
+external_repo: /home/enesturkoglu2/projects/external/jersey-number-pipeline
+external_repo_head: 007d54e5530a66616ed5081ca35e0028b36aadb5
+
+checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-parseq/soccernet-finetuned/parseq_epoch=24-step=2575-val_accuracy=95.6044-val_NED=96.3255.ckpt
+  sha256: 14aeb3b13876500e04c93674716a3dae54c2e2d4e06b1abe04758d260d314879
+  byte_size: 381608677
+
+environment:
+  name: sn-jersey-parseq-cpu
+  manifest_path: /home/enesturkoglu2/projects/soccernet/checkpoints/jersey-parseq/environment/environment_manifest.json
+  manifest_sha256_prefix: 7377782dad758f7f
+
+digit_policy:
+  pattern: '^[0-9]{1,2}$'
+  max_digits: 2
+  letter_to_digit_conversion: false
+  leading_zero_preserved: true
+  whitespace_strip_only: true
+
+fixed_gate:
+  comparison_operator: '>='
+  require_valid_jersey_string: true
+  # Cut values resolved dynamically from discovery_gate.candidate_gate_json
+  forbid_threshold_retune: true
+  forbid_operating_point_search: true
+
+preregistered_decision:
+  min_readable_positive: 10
+  min_non_readable_negative: 24
+  pass_requires_accepted_exact_gte: 2
+  fail_on_accepted_wrong_positive: true
+  fail_on_accepted_negative: true
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5c_holdout_primary_parseq_validation
+
+network_policy: pass_offline_holdout_parseq_validation_only

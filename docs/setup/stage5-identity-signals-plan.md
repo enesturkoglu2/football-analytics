@@ -30,14 +30,20 @@
 - **REBUILD-R6 discovery PARSeq candidate gate:** completed
   (`DISCOVERY_SAFE_CANDIDATE_GATE_DERIVED`; cut
   `0.99992299168434329`; support=1; not deployment)
+- **REBUILD-R7 holdout-primary annotation freeze:** completed
+- **REBUILD-R8 holdout fixed-gate validation:** completed
+  (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`; accepted 0/0/0)
+- **REBUILD-R8A Stage 5C closure:** completed
+  (automated jersey fusion = diagnostic-only)
 - **Next technical gate:**
-  `REBUILD-R7_STAGE5C_HOLDOUT_PRIMARY_ANNOTATION_FREEZE`
+  `STAGE5D-A_TARGET_GALLERY_ENROLLMENT_DESIGN_AND_PREFLIGHT`
 - **Focused target-player gate:** Stage 5D
 - **Pitch-position / GameState:** Stage 6 (separate from Stage 5)
 - **Recovery / design docs:**
   [rebuild-r2-stage4b-stage5-recovery.md](rebuild-r2-stage4b-stage5-recovery.md),
   [stage5c-clean-discovery-holdout-design.md](stage5c-clean-discovery-holdout-design.md),
-  [stage5c-discovery-parseq-candidate-gate-r2.md](stage5c-discovery-parseq-candidate-gate-r2.md)
+  [stage5c-discovery-parseq-candidate-gate-r2.md](stage5c-discovery-parseq-candidate-gate-r2.md),
+  [stage5c-holdout-parseq-validation-and-closure-r2.md](stage5c-holdout-parseq-validation-and-closure-r2.md)
 - **Identity-signals policy:** `configs/reid/identity_signals_stage5.yaml`
 - **Crop-quality policy:** `configs/reid/crop_quality_policy_stage5a.yaml`
 - **Kit measurement config:** `configs/reid/kit_descriptor_stage5b.yaml`
@@ -264,8 +270,11 @@ Rules:
 | **5C-C3F / R2** | rebuild r2 clean universe + capacity-balanced discovery/holdout | completed (`r2_capacity_balanced`; old C3F-A triad superseded/retained) |
 | **REBUILD-R5** | discovery primary annotation freeze | completed (reserve closed) |
 | **REBUILD-R6** | discovery PARSeq inference + candidate gate | completed (cut `0.99992299168434329`; support=1; not deployment) |
-| **REBUILD-R7** | holdout primary annotation freeze | next |
-| **5C-D** | tracklet-level multi-frame jersey aggregation | pending |
+| **REBUILD-R7** | holdout primary annotation freeze | completed (reserve closed) |
+| **REBUILD-R8** | holdout fixed-gate validation | completed (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`) |
+| **REBUILD-R8A** | Stage 5C closure / diagnostic-only jersey policy | completed |
+| **5D-A** | target gallery enrollment design / preflight | next |
+| **5C-D** | tracklet-level multi-frame jersey aggregation | deferred / not active for Stage 5E fusion |
 | **5D** | focused target-player enrollment and gallery design (`target_A` / `target_B` / `non_target` / `unknown`) | pending |
 | **5E** | pair-level auxiliary evidence fusion and manual-review ranking | pending |
 | **6A** | camera calibration / pitch projection adapter investigation | pending (Stage 6) |
@@ -411,15 +420,14 @@ and [stage5b-kit-visual-validation.md](stage5b-kit-visual-validation.md)):
 - Rebuild r2 recovery + clean capacity-balanced split:
   **`completed_capacity_balanced_clean_discovery_holdout_design`**
   (`r2_capacity_balanced`; selected recomputed 18; vector 5/7/4/2)
-- REBUILD-R5 annotation freeze + REBUILD-R6 PARSeq candidate gate:
-  completed (cut `0.99992299168434329`; support=1; not deployment;
-  negative digit emission 27/27)
+- REBUILD-R5..R8A: discovery/holdout annotation, PARSeq candidate gate,
+  holdout validation (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`), and
+  Stage 5C closure complete (automated jersey = diagnostic-only)
 - Next technical gate:
-  **`REBUILD-R7_STAGE5C_HOLDOUT_PRIMARY_ANNOTATION_FREEZE`**
-- PARSeq remains primary candidate; DBNet/SAR family closed;
-  jersey OCR not abandoned; Stage 5D/5E/6 scopes unchanged; old
-  78-item pilot and C3E threshold are **not** reused for r2
-  annotation / gating
+  **`STAGE5D-A_TARGET_GALLERY_ENROLLMENT_DESIGN_AND_PREFLIGHT`**
+- Discovery cut retained for provenance only; not deployment /
+  Stage 5E fusion threshold; Stage 5D/5E/6 scopes continue with
+  appearance-primary identity policy
 
 ### Stage 5C-A handoff (completed)
 
@@ -467,8 +475,13 @@ The retained downstream order is:
   reserve closed;
 - **REBUILD-R6 (completed):** discovery PARSeq candidate gate
   (cut `0.99992299168434329`; support=1; not deployment);
-- **REBUILD-R7 (next):** holdout primary annotation freeze;
-- **Stage 5C-D:** tracklet-level multi-frame aggregation;
+- **REBUILD-R7 (completed):** holdout primary annotation freeze;
+- **REBUILD-R8 (completed):** holdout fixed-gate validation
+  (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`; accepted 0/0/0);
+- **REBUILD-R8A (completed):** Stage 5C closed; automated jersey
+  diagnostic-only for Stage 5E;
+- **Stage 5D-A (next):** target gallery enrollment design / preflight;
+- **Stage 5C-D:** deferred relative to Stage 5E fusion path;
 - **Stage 5D:** target-player enrollment/gallery memory;
 - **Stage 5E:** evidence fusion and golden evaluation; and
 - **Stage 6:** GameState/calibration/pitch coordinates and spatial
@@ -578,9 +591,9 @@ Stage 5C-C2 completed a controlled recognizer/preprocessing ablation:
 - Doc: `docs/setup/stage5c-parseq-false-positive-audit.md`
 - Next after C3E historical path was independent holdout design;
   under rebuild r2 this is superseded by the clean
-  capacity-balanced split (`r2_capacity_balanced`), R5 annotation
-  freeze, and R6 discovery PARSeq candidate gate; next gate is
-  **REBUILD-R7 holdout primary annotation freeze**
+  capacity-balanced split (`r2_capacity_balanced`), R5–R8A holdout
+  validation, and Stage 5C closure; next gate is
+  **STAGE5D-A target gallery enrollment design / preflight**
 - Legibility classifier remains a future helper-gate candidate
 
 ### Rebuild r2 clean discovery/holdout notes
@@ -594,14 +607,18 @@ Stage 5C-C2 completed a controlled recognizer/preprocessing ablation:
 - Docs:
   [rebuild-r2-stage4b-stage5-recovery.md](rebuild-r2-stage4b-stage5-recovery.md),
   [stage5c-clean-discovery-holdout-design.md](stage5c-clean-discovery-holdout-design.md),
-  [stage5c-discovery-parseq-candidate-gate-r2.md](stage5c-discovery-parseq-candidate-gate-r2.md)
+  [stage5c-discovery-parseq-candidate-gate-r2.md](stage5c-discovery-parseq-candidate-gate-r2.md),
+  [stage5c-holdout-parseq-validation-and-closure-r2.md](stage5c-holdout-parseq-validation-and-closure-r2.md)
 - Old C3F-A holdout triad retained for history/tests;
   `must_not_be_used_for_new_r2_annotation=true`
 - R5: discovery-primary annotated; reserve closed
 - R6: candidate cut `0.99992299168434329` (`>=`, support=1);
   negative digit emission 27/27; not a deployment threshold;
   immutable vs later holdout outcomes
-- Next: REBUILD-R7 holdout primary annotation freeze
+- R7/R8: holdout annotated + validated
+  (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`; accepted exact/wrong/neg=0/0/0)
+- R8A: Stage 5C closed; automated PARSeq jersey diagnostic-only
+- Next: STAGE5D-A target gallery enrollment design / preflight
 
 ### Stage 5B3 guardrails (retained)
 

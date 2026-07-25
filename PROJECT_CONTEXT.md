@@ -141,16 +141,17 @@ Ana dal:
 
     94daa9e Create project foundation and record environment
 
-Güncel durum (REBUILD-R6A discovery-gate freeze / documentation commit):
+Güncel durum (REBUILD-R8A Stage 5C closure / documentation commit):
 
-- pre-commit HEAD: `565d7ea03c75a3bac6c5dba888bfc21bade4a411`
-- documentation/application commit: this REBUILD-R6A commit
+- pre-commit HEAD: `17c1c67559da34ae430a04cda7c8335d0eded533`
+- documentation/application commit: this REBUILD-R8A commit
   (hash after push; reported in the final gate report)
 - `main == origin/main` after push
-- tracked scope: three discovery-gate source/config/test files +
-  one new gate doc + four updated docs (exact 8 files)
+- tracked scope: three holdout-validation source/config/test files +
+  one new closure doc + five updated docs (exact 9 files)
 - sistem CPU-only'dir
-- generated rebuild / annotation / gate outputs remain Git-ignored
+- generated rebuild / annotation / gate / closure outputs remain
+  Git-ignored
 
 ## 6. Proje klasörleri
 
@@ -481,51 +482,37 @@ yüklenmedi):
 
 Güncel durum:
 
-- **Rebuild r2 Stage 4B→Stage 5C recovery:** completed
-  (historical structural counts exact; **not** historical freeze
-  restore / byte-identity claim)
-- **Canonical split generation:** `r2_capacity_balanced`
-- **Canonical split root:**
-  `outputs/reid/full_stage4b_rebuild_r2_stage5c_clean_split_capacity_balanced`
-- Selected source quotas: reused/recomputed **110/18**; vector
-  **5/7/4/2**; maximum feasible recomputed confirmed
-- Previous R4 unbalanced split deprecated for downstream (immutable)
-- Old 78-item pilot **not** reused as the r2 annotation set
-- Old C3E threshold **not** reused
-- **REBUILD-R5:** discovery-primary annotation freeze complete
-  (10 readable / 27 non-readable / 3 uncertain; reserve closed)
-- **REBUILD-R6:** discovery-primary PARSeq inference + candidate gate
-  derived (`DISCOVERY_SAFE_CANDIDATE_GATE_DERIVED`)
-  - exact cut `0.99992299168434329` (`>=`), float64 hex `3fefff5e8079b000`
-  - support=1 (`discovery_primary_028`); wrong/neg/uncertain accepted=0
-  - positive exact/wrong=5/5; negative digit emission=27/27
-  - **not** deployment threshold; **not** calibrated probability
-  - immutable vs later holdout outcomes
-- Holdout / reserve **still unopened / unreviewed**
+- **Stage 5C status:** `closed` (REBUILD-R8A)
+- **Holdout validation decision:**
+  `INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`
+- Canonical split generation: `r2_capacity_balanced`
+- Discovery candidate cut retained for provenance only:
+  `0.99992299168434329` (`>=`) — **not** active deployment /
+  Stage 5E fusion threshold
+- R8 fixed-gate accepted exact/wrong/negative/uncertain = **0/0/0/0**
+- Raw holdout PARSeq: exact/wrong=5/11; negative emission=30/30
+- Threshold unchanged after holdout; no retune/retrain
+- Holdout/discovery reserves closed
+- Automated PARSeq jersey evidence for Stage 5E:
+  **`diagnostic_only`** (no fusion / identity / veto / enrollment)
+- Appearance ReID remains primary; unknown identity preserved
 - **Sıradaki kapı:**
-  `REBUILD-R7_STAGE5C_HOLDOUT_PRIMARY_ANNOTATION_FREEZE`
-- DBNet/SAR family closed; jersey OCR **not** abandoned
-- PARSeq remains the primary recognizer candidate
-- Legibility classifier is a future helper-gate candidate
-  (not installed/downloaded here)
-- Stage 5D / 5E / 6 scopes unchanged
+  `STAGE5D-A_TARGET_GALLERY_ENROLLMENT_DESIGN_AND_PREFLIGHT`
 
 Docs:
 
 - `docs/setup/rebuild-r2-stage4b-stage5-recovery.md`
 - `docs/setup/stage5c-clean-discovery-holdout-design.md`
 - `docs/setup/stage5c-discovery-parseq-candidate-gate-r2.md`
+- `docs/setup/stage5c-holdout-parseq-validation-and-closure-r2.md`
 
 Planlanan sıra:
 
-1. REBUILD-R7 holdout primary annotation freeze
-2. Holdout evaluation against the frozen discovery candidate gate
-3. Later deployment/calibration decisions only if holdout protocol
-   allows (candidate cut itself is not retuned post-holdout)
-4. Stage 5C-D segment-level OCR aggregation
-5. Stage 5D target gallery/enrollment
-6. Stage 5E evidence fusion
-7. Stage 6 spatial continuity / pitch position
+1. Stage 5D-A target gallery enrollment design / preflight
+2. Stage 5D gallery freeze (appearance-driven; no automated PARSeq
+   jersey enrollment)
+3. Stage 5E evidence fusion (automated PARSeq jersey diagnostic-only)
+4. Stage 6 spatial continuity / pitch position
 
 ## 9. Cursor için zorunlu kurallar
 
@@ -661,14 +648,10 @@ Sınırlar:
 
 ## 11. Mevcut öncelik
 
-Rebuild r2 Stage 4B→5C recovery, clean capacity-balanced split,
-discovery-primary annotation freeze ve discovery PARSeq candidate
-gate tamamlandı. Canonical generation `r2_capacity_balanced`.
-Candidate cut exact `0.99992299168434329` (`>=`, support=1);
-deployment/calibration claim yok; holdout sonucuna göre cut
-değiştirilemez. Negative digit emission 27/27 riski devam eder.
-Holdout hâlâ unopened. Sıradaki kapı
-**REBUILD-R7_STAGE5C_HOLDOUT_PRIMARY_ANNOTATION_FREEZE**:
+Stage 5C kapatıldı (`INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`). Automated
+PARSeq jersey Stage 5E fusion için diagnostic-only. Discovery cut
+yalnız provenance. Sıradaki kapı
+**STAGE5D-A_TARGET_GALLERY_ENROLLMENT_DESIGN_AND_PREFLIGHT**:
 
     Video okuma
     → İnsan/oyuncu tespiti (tamamlandı)
@@ -681,21 +664,13 @@ Holdout hâlâ unopened. Sıradaki kapı
     → MMOCR environment + DBNet/SAR asset (5C-B tamamlandı)
     → Offline CPU jersey OCR baseline smoke (5C-C1 tamamlandı)
     → Controlled ablation (5C-C2 tamamlandı; no exact signal;
-      DBNet/SAR family closed; jersey OCR not abandoned)
-    → PARSeq capability audit (5C-C3A tamamlandı; no install)
-    → Isolated PARSeq CPU environment (5C-C3B tamamlandı)
-    → Controlled PARSeq checkpoint acquisition (5C-C3C tamamlandı)
-    → Offline PARSeq smoke (5C-C3D tamamlandı; exact 5/20;
-      negative emission 26/26; no threshold)
-    → PARSeq false-positive / confidence audit (5C-C3E tamamlandı;
-      descriptive ranking; C3E threshold not reused)
-    → Rebuild r2 Stage 4B→5C recovery + clean 474 universe
-      + capacity-balanced split (tamamlandı; r2_capacity_balanced)
-    → Discovery primary annotation freeze (R5 tamamlandı; reserve closed)
-    → Discovery PARSeq inference + candidate gate (R6 tamamlandı;
-      cut 0.99992299168434329; support=1; not deployment)
-    → Holdout primary annotation freeze (REBUILD-R7 — sıradaki)
-    → Segment aggregation / gallery / fusion (5C-D, 5D, 5E)
+      DBNet/SAR family closed)
+    → PARSeq capability / env / checkpoint / smoke / FP audit
+      (5C-C3A–E tamamlandı; C3E threshold not reused)
+    → Rebuild r2 clean split + discovery gate + holdout validation
+      (R4–R8 tamamlandı; R8A Stage 5C closed)
+    → Target gallery enrollment design (Stage 5D-A — sıradaki)
+    → Evidence fusion (5E; automated PARSeq jersey diagnostic-only)
     → Spatial continuity (Stage 6)
 
 ## 12. Jersey OCR güvenlik kısıtları (Stage 5C-C sonrası da geçerli)

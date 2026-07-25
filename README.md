@@ -60,32 +60,27 @@ Tamamlananlar:
 - [x] Discovery primary annotation freeze (REBUILD-R5; reserve closed)
 - [x] Discovery-primary PARSeq inference + zero-error candidate gate
       (REBUILD-R6; support=1; not a deployment threshold)
+- [x] Holdout primary annotation freeze (REBUILD-R7; reserve closed)
+- [x] Holdout-primary PARSeq fixed-gate validation (REBUILD-R8;
+      `INCONCLUSIVE_SAFE_BUT_LOW_SUPPORT`)
+- [x] Stage 5C closure / automated jersey fusion policy (REBUILD-R8A)
 
 Henüz yapılmayanlar:
 
-- [ ] Holdout primary annotation freeze (REBUILD-R7)
-- [ ] Holdout evaluation against frozen candidate gate
-- [ ] Confidence threshold seçimi / validation (deployment)
-- [ ] Segment-level OCR aggregation (Stage 5C-D)
 - [ ] Target enrollment / gallery memory (Stage 5D)
-- [ ] Evidence fusion evaluation (Stage 5E)
+- [ ] Evidence fusion evaluation (Stage 5E; automated PARSeq jersey
+      diagnostic-only — fusion’a giremez)
 - [ ] Spatial continuity / pitch position (Stage 6)
 
-DBNet/SAR ailesi C2 sonrası kapalıdır; jersey OCR iptal edilmedi.
-SoccerNet-finetuned PARSeq primary candidate olmaya devam eder.
-C3D/C3E historical pilot sonuçları referans olarak durur; **eski
-78-item pilot yeniden annotation seti değildir** ve **eski C3E
-threshold yeniden kullanılmaz**. Recovery sonrası canonical split
-generation: **`r2_capacity_balanced`**. Discovery-primary annotation
-tamamlandı (10 readable / 27 non-readable; reserve açılmadı).
-Discovery PARSeq: exact 5/5 wrong; negative digit emission **27/27**;
-zero-error candidate cut exact **`0.99992299168434329`** (`>=`,
-support=1, item `discovery_primary_028`). Bu cut **deployment /
-calibration claim değildir**; holdout sonucuna göre değiştirilemez.
-Holdout hâlâ unopened/unreviewed. Sıradaki kapı:
-**REBUILD-R7_STAGE5C_HOLDOUT_PRIMARY_ANNOTATION_FREEZE**.
-Legibility classifier ileride yardımcı gate adayıdır (henüz
-kurulmadı/indirilmedi). Stage 5D/5E/6 kapsamları değişmedi.
+DBNet/SAR ailesi C2 sonrası kapalıdır. Stage 5C automated PARSeq
+jersey kanalı **diagnostic-only** kapatıldı; Stage 5E fusion /
+identity assignment / veto / gallery enrollment için kullanılamaz.
+Discovery candidate cut (`0.99992299168434329`) yalnız provenance
+için saklanır; **active deployment threshold değildir**. Holdout
+üzerinde threshold retune yapılmadı. R8: raw exact/wrong=5/11;
+negative emission=30/30; fixed-gate accepted exact/wrong/neg=0/0/0.
+Stage 5C **closed**. Sıradaki kapı:
+**STAGE5D-A_TARGET_GALLERY_ENROLLMENT_DESIGN_AND_PREFLIGHT**.
 Checkpoint/asset'ler Git'e commit edilmez.
 
 ## Geliştirme ortamları
@@ -116,6 +111,8 @@ Aktivasyon:
   — Clean label-blind capacity-balanced discovery/holdout design
 - [docs/setup/stage5c-discovery-parseq-candidate-gate-r2.md](docs/setup/stage5c-discovery-parseq-candidate-gate-r2.md)
   — Discovery-primary PARSeq candidate gate (r2; not deployment)
+- [docs/setup/stage5c-holdout-parseq-validation-and-closure-r2.md](docs/setup/stage5c-holdout-parseq-validation-and-closure-r2.md)
+  — Holdout validation + Stage 5C closure (inconclusive safe low support)
 - [docs/setup/stage5c-jersey-pilot-results.md](docs/setup/stage5c-jersey-pilot-results.md)
   — 78-item manuel jersey pilot sonuçları (historical; not r2 annotation set)
 - [docs/setup/stage5c-jersey-mmocr-baseline-results.md](docs/setup/stage5c-jersey-mmocr-baseline-results.md)
