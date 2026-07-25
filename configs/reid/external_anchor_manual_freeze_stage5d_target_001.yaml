@@ -1,0 +1,184 @@
+# Stage 5D-B1E-E — Freeze human external anchor decisions.
+# Approves 7 anchors. No embeddings, gallery, OCR, or crop copies.
+schema_version: reid_external_anchor_manual_freeze_config_v1
+stage: 5D-B1E-E
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_b1e_e_external_anchor_manual_freeze_only
+
+project_head_expected: 143ce0880324119be8ffab97b8f50a9b3b984485
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_bytes: 14366504
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+
+stage5d_b1e_d_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_anchor_review_package
+  expected_final_status: COMPLETED_STAGE5D_B1E_D_TARGET_001_EXTERNAL_ANCHOR_REVIEW_READY
+  expected_candidate_count: 15
+  expected_per_occurrence:
+    EXT_004: 6
+    EXT_183: 3
+    EXT_198: 6
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_B1E_D_TARGET_001_ANCHOR_REVIEW_143ce08.tar.gz
+  expected_snapshot_sha256: 830dcb938bb9c2effa2e57f6f3734c2b141cfd283beedbd81537bb1d86b0f4e2
+
+stage5d_b1e_c_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_occurrence_freeze
+  expected_final_status: COMPLETED_STAGE5D_B1E_C_TARGET_001_EXTERNAL_OCCURRENCES_FROZEN
+
+target_definition:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package/target_definition/target_001_definition_frozen.json
+
+human_anchor_freeze:
+  target_id: target_001
+  reviewer: Furkan
+  final_approver: Furkan
+  manual_identity_confirmed: "yes"
+  automated_ocr_used: false
+  similarity_used: false
+  model_identity_prediction_used: false
+  redundant_nonselected_reason: not_selected_redundant_valid_target_crop
+  approved_exact_ids:
+    - target_001_ext_anchor_001
+    - target_001_ext_anchor_003
+    - target_001_ext_anchor_004
+    - target_001_ext_anchor_006
+    - target_001_ext_anchor_008
+    - target_001_ext_anchor_011
+    - target_001_ext_anchor_014
+  decisions:
+    target_001_ext_anchor_001:
+      manual_anchor_decision: target_anchor_yes
+      manual_crop_valid: "yes"
+      manual_target_dominant: "yes"
+      manual_single_person: "yes"
+      manual_view_category: rear_oblique
+      manual_quality_notes: Tek kişi, tam vücut ve yararlı arka-çapraz görünüm.
+    target_001_ext_anchor_002:
+      manual_anchor_decision: target_anchor_no
+      manual_crop_valid: "yes"
+      manual_target_dominant: "yes"
+      manual_single_person: "yes"
+      manual_view_category: right_side
+      manual_quality_notes: >-
+        Hedef oyuncuya ait geçerli crop; anchor_001 ile fazla benzer olduğu
+        için gereksiz tekrar olarak seçilmedi.
+    target_001_ext_anchor_003:
+      manual_anchor_decision: target_anchor_yes
+      manual_crop_valid: "yes"
+      manual_target_dominant: "yes"
+      manual_single_person: "yes"
+      manual_view_category: right_side
+      manual_quality_notes: Tam vücut ve belirgin sağ yan görünüm.
+    target_001_ext_anchor_004:
+      manual_anchor_decision: target_anchor_yes
+      manual_crop_valid: "yes"
+      manual_target_dominant: "yes"
+      manual_single_person: "yes"
+      manual_view_category: front_oblique
+      manual_quality_notes: Ön-çapraz görünüm; gallery çeşitliliği sağlar.
+    target_001_ext_anchor_005:
+      manual_anchor_decision: target_anchor_no
+      manual_crop_valid: "yes"
+      manual_target_dominant: "yes"
+      manual_single_person: "yes"
+      manual_view_category: front_oblique
+      manual_quality_notes: >-
+        Hedef oyuncuya ait geçerli crop; anchor_004 ve anchor_006 ile
+        tekrarlı ve daha bulanık olduğu için seçilmedi.
+    target_001_ext_anchor_006:
+      manual_anchor_decision: target_anchor_yes
+      manual_crop_valid: "yes"
+      manual_target_dominant: "yes"
+      manual_single_person: "yes"
+      manual_view_category: front
+      manual_quality_notes: Temiz ve yararlı önden görünüm.
+    target_001_ext_anchor_007:
+      manual_anchor_decision: multi_person_ambiguous
+      manual_crop_valid: uncertain
+      manual_target_dominant: "yes"
+      manual_single_person: "no"
+      manual_view_category: front_oblique
+      manual_quality_notes: >-
+        Alt kenarda başka kişinin başı crop içine girdiği için
+        multi-person ambiguous.
+    target_001_ext_anchor_008:
+      manual_anchor_decision: target_anchor_yes
+      manual_crop_valid: "yes"
+      manual_target_dominant: "yes"
+      manual_single_person: "yes"
+      manual_view_category: rear_oblique
+      manual_quality_notes: Büyük, temiz ve tek kişilik arka-çapraz görünüm.
+    target_001_ext_anchor_009:
+      manual_anchor_decision: target_anchor_no
+      manual_crop_valid: "yes"
+      manual_target_dominant: "yes"
+      manual_single_person: "yes"
+      manual_view_category: rear_oblique
+      manual_quality_notes: >-
+        Hedef oyuncuya ait geçerli crop; anchor_008 ile çok benzer ve daha
+        bulanık olduğu için seçilmedi.
+    target_001_ext_anchor_010:
+      manual_anchor_decision: invalid
+      manual_crop_valid: "no"
+      manual_target_dominant: uncertain
+      manual_single_person: "yes"
+      manual_view_category: rear_oblique
+      manual_quality_notes: Crop aşırı dar ve oyuncu ciddi biçimde kesilmiş.
+    target_001_ext_anchor_011:
+      manual_anchor_decision: target_anchor_yes
+      manual_crop_valid: "yes"
+      manual_target_dominant: "yes"
+      manual_single_person: "yes"
+      manual_view_category: rear
+      manual_quality_notes: Temiz tam-vücut arka görünüm ve farklı koşu pozu.
+    target_001_ext_anchor_012:
+      manual_anchor_decision: target_anchor_no
+      manual_crop_valid: "yes"
+      manual_target_dominant: "yes"
+      manual_single_person: "yes"
+      manual_view_category: rear
+      manual_quality_notes: >-
+        Hedef oyuncuya ait geçerli crop; anchor_011 ve anchor_014 ile
+        gereksiz tekrar olduğu için seçilmedi.
+    target_001_ext_anchor_013:
+      manual_anchor_decision: multi_person_ambiguous
+      manual_crop_valid: uncertain
+      manual_target_dominant: uncertain
+      manual_single_person: "no"
+      manual_view_category: rear
+      manual_quality_notes: Beyaz takım oyuncusuyla belirgin overlap içeriyor.
+    target_001_ext_anchor_014:
+      manual_anchor_decision: target_anchor_yes
+      manual_crop_valid: "yes"
+      manual_target_dominant: "yes"
+      manual_single_person: "yes"
+      manual_view_category: rear
+      manual_quality_notes: Temiz, tek kişilik arka görünüm ve farklı koşu duruşu.
+    target_001_ext_anchor_015:
+      manual_anchor_decision: target_anchor_no
+      manual_crop_valid: "yes"
+      manual_target_dominant: "yes"
+      manual_single_person: "yes"
+      manual_view_category: rear
+      manual_quality_notes: >-
+        Hedef oyuncuya ait geçerli crop; anchor_014 ile çok benzer ve daha
+        küçük olduğu için seçilmedi.
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_anchor_freeze
