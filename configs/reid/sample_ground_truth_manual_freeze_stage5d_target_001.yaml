@@ -1,0 +1,87 @@
+# Stage 5D-F2A — Freeze human sample ground-truth decisions for target_001.
+# No similarity, ranking, embedding vector reads, threshold, or gallery mutation.
+schema_version: reid_sample_ground_truth_manual_freeze_config_v1
+stage: 5D-F2A
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f2a_sample_ground_truth_manual_freeze_only
+
+project_head_expected: 5381128da24378a99c91f4076390380917a7fd18
+project_head_message_expected: Add target 001 sample ground-truth review package
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+  load_forbidden: true
+
+stage5d_f2_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_sample_ground_truth_review_package
+  expected_final_status: COMPLETED_STAGE5D_F2_TARGET_001_SAMPLE_GROUND_TRUTH_REVIEW_READY
+  expected_scoreable: 150
+  expected_unscoreable: 141
+  expected_components: 129
+  expected_contact_sheets: 13
+  expected_manual_decisions: 0
+  expected_similarity_rows: 0
+  expected_gallery_members: 7
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F2_TARGET_001_GT_REVIEW_5381128.tar.gz
+  expected_snapshot_sha256: 225e189d51008e83c6bb2c8889c9f66292bccd3aac17e6501faa2cbbecb0774b
+
+stage5d_f1_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_validation_design
+
+gallery_v1:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v1
+  expected_members: 7
+  npy_load_forbidden: true
+
+target_definition:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package/target_definition/target_001_definition_frozen.json
+
+human_review:
+  target_id: target_001
+  reviewer: Furkan
+  final_approver: Furkan
+  similarity_observed_before_freeze: false
+  gallery_vectors_read: false
+  sample_embedding_vectors_read: false
+  ocr_used: false
+  model_identity_used: false
+
+expected_distribution:
+  reviewed_total: 150
+  target_occurrence_yes: 8
+  target_occurrence_no: 103
+  non_player: 7
+  uncertain: 8
+  multi_person_ambiguous: 24
+  invalid: 0
+  clean_positive_metric_items: 8
+  clean_negative_metric_items: 110
+  excluded_metric_items: 32
+  eligible_total: 118
+
+policy:
+  threshold_selected: false
+  identity_assignment: false
+  gallery_mutation: false
+  automatic_gallery_growth: false
+  similarity_computation: false
+  ranking_computation: false
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_sample_ground_truth_freeze
