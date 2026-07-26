@@ -1,0 +1,110 @@
+# Stage 5D-F3G — Target 001 approved crop OSNet embedding + gallery-v2
+# and same-team distractor gallery-v1. Reuses gallery-v1 (7) immutably.
+# Embeds only 6 approved new target crops + 23 approved HN crops.
+# No sample evaluation, threshold, identity assignment, or gallery-v1 mutation.
+schema_version: reid_target_gallery_v2_and_distractor_gallery_config_v1
+stage: 5D-F3G
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f3g_gallery_v2_and_distractor_gallery_only
+
+project_head_expected: a71c12287a8f9ad857716d3ed685135c024dd4fe
+project_head_message_expected: Freeze target 001 external refinement crop decisions
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_bytes: 14366504
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  decode_forbidden: true
+  crop_read_forbidden: true
+  embedding_read_forbidden: true
+  score_row_read_forbidden: true
+  rank_row_read_forbidden: true
+  inference_forbidden: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_bytes: 5613764
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+  model_name: osnet_x1_0
+  embedding_dimension: 512
+  checkpoint_family: market1501_softmax_256x128
+
+canonical_reid_runtime:
+  sn_reid_root: /home/enesturkoglu2/projects/soccernet/sn-reid
+  expected_sn_reid_commit: 621e2b0f2d2a7a3e207b8dd747542b6608bf72db
+  conda_env: sn-reid-cpu
+  batch_size: 8
+  device: cpu
+  eval_mode: true
+  gradients_disabled: true
+  embedding_determinism_atol: 1.0e-5
+  unit_norm_atol: 1.0e-4
+
+stage5d_f3f_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_crop_manual_freeze
+  expected_final_status: COMPLETED_STAGE5D_F3F_TARGET_001_EXTERNAL_REFINEMENT_CROP_DECISIONS_FROZEN
+  expected_approved_target_crops: 4
+  expected_approved_hard_negative_crops: 23
+  expected_hard_negative_crop_no: 4
+  expected_invalid: 5
+  expected_multi_person_ambiguous: 3
+  expected_gallery_members: 7
+  expected_hard_negative_gallery_members: 0
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3F_TARGET_001_EXTERNAL_REFINEMENT_CROP_FREEZE_a71c122.tar.gz
+  expected_snapshot_sha256: c05637f2e047c10f9306ab241a2c073ffb0890bbb412391822283237f6db8a10
+
+stage5d_f3e_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_crop_review_package
+  expected_final_status: COMPLETED_STAGE5D_F3E_TARGET_001_EXTERNAL_REFINEMENT_CROP_REVIEW_READY
+
+stage5d_f3d_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_manual_freeze
+  expected_final_status: COMPLETED_STAGE5D_F3D_TARGET_001_EXTERNAL_REFINEMENT_DECISIONS_FROZEN
+
+stage5d_f3c_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_review_package
+  expected_final_status: COMPLETED_STAGE5D_F3C_TARGET_001_EXTERNAL_REFINEMENT_REVIEW_READY
+
+gallery_v1:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v1
+  expected_final_status: COMPLETED_STAGE5D_B1E_F_TARGET_001_GALLERY_BUILT_READY_FOR_VALIDATION
+  expected_readiness: TARGET_001_GALLERY_BUILT_READY_FOR_INDEPENDENT_VALIDATION
+  expected_members: 7
+  expected_embedding_sha256: ec5a8380a90100f306cde40d98d1d5757456208a88ec438f5cb6a855778d62aa
+  expected_medoid_id: target_001_ext_anchor_004
+  mutation_forbidden: true
+  npy_recompute_forbidden: true
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_B1E_F_TARGET_001_GALLERY_e43a768.tar.gz
+  expected_snapshot_sha256: bc448e6ea61331cd864268b687cb9b6c84048a9f9295737db43624b851b8468e
+
+target:
+  target_id: target_001
+  target_alias: sarı takım 5 numaralı oyuncu
+
+gallery_policy:
+  automatic_gallery_growth: false
+  automatic_enrollment: false
+  threshold_selection: false
+  sample_identity_assignment: false
+  human_approved_only: true
+  gallery_v1_mutation: false
+  target_distractor_score_formula_forbidden: true
+
+outlier_diagnostics:
+  removal_allowed: false
+  method: median_mad
+  mad_multiplier: 3.0
+  descriptive_only: true
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v2_and_distractor_gallery_v1
