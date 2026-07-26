@@ -1,0 +1,141 @@
+# Stage 5D-F3C — External-only hard-negative + target-view anchor review package.
+# Review package only. No OSNet, OCR, similarity, approvals, or gallery mutation.
+schema_version: reid_external_refinement_review_config_v1
+stage: 5D-F3C
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f3c_external_refinement_review_only
+
+project_head_expected: f98215a22b272fbbb6c591a9014b33a35d4f62ee
+project_head_message_expected: Add target 001 retrieval refinement design
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_bytes: 14366504
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+  expected_width: 1332
+  expected_height: 746
+  expected_fps: 30.0
+  expected_frames: 784
+  enrollment_only: true
+  sample_overlap: 0
+  future_evaluation_input: false
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  decode_forbidden: true
+  crop_read_forbidden: true
+  embedding_read_forbidden: true
+  candidate_selection_forbidden: true
+  gallery_optimization_forbidden: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  load_forbidden: true
+  new_embedding_forbidden: true
+
+stage5d_f3b_refinement_design:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_retrieval_error_manual_review_and_refinement_design
+  expected_final_status: COMPLETED_STAGE5D_F3B_TARGET_001_REFINEMENT_DESIGN_READY
+  expected_f3_outcome: INDEPENDENT_RETRIEVAL_PROMISING_BUT_OVERLAPPING
+  expected_segment_ap: 0.5157291205956066
+  expected_segment_margin: -0.036077141761779785
+  expected_gallery_members: 7
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3B_TARGET_001_REFINEMENT_DESIGN_f98215a.tar.gz
+  expected_snapshot_sha256: 4e1dbf18dbc95e9fd84b0b6e05cabf3ff0d3fb7358729338a987d68b75f85c54
+
+stage5d_b1e_b_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_tracking_seed_review_package
+  expected_final_status: COMPLETED_STAGE5D_B1E_B_EXTERNAL_TRACKING_SEED_REVIEW_READY
+  expected_detection_total: 8355
+  expected_detection_frames_with_boxes: 784
+  expected_tracking_observations: 7796
+  expected_raw_track_count: 248
+  expected_ext_candidate_count: 248
+  expected_review_eligible_count: 138
+
+stage5d_b1e_c_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_occurrence_freeze
+  expected_final_status: COMPLETED_STAGE5D_B1E_C_TARGET_001_EXTERNAL_OCCURRENCES_FROZEN
+  expected_selected_positive_count: 3
+
+stage5d_b1e_d_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_anchor_review_package
+  expected_candidate_count: 15
+  expected_observation_quality_rows: 501
+
+stage5d_b1e_e_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_anchor_freeze
+  expected_final_status: COMPLETED_STAGE5D_B1E_E_TARGET_001_EXTERNAL_ANCHORS_FROZEN
+  expected_approved_count: 7
+
+gallery_v1:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v1
+  expected_members: 7
+  npy_load_forbidden: true
+  mutation_forbidden: true
+
+frozen_target_occurrences:
+  - external_candidate_code: EXT_004
+    raw_track_id: 11
+    first_frame: 0
+    last_frame: 186
+    observation_count: 185
+  - external_candidate_code: EXT_183
+    raw_track_id: 388
+    first_frame: 456
+    last_frame: 499
+    observation_count: 44
+  - external_candidate_code: EXT_198
+    raw_track_id: 450
+    first_frame: 511
+    last_frame: 783
+    observation_count: 272
+
+prior_anchor_candidate_frames:
+  EXT_004: [37, 54, 95, 123, 143, 155]
+  EXT_183: [463, 475, 493]
+  EXT_198: [522, 594, 610, 638, 684, 731]
+
+approved_anchor_ids:
+  - target_001_ext_anchor_001
+  - target_001_ext_anchor_003
+  - target_001_ext_anchor_004
+  - target_001_ext_anchor_006
+  - target_001_ext_anchor_008
+  - target_001_ext_anchor_011
+  - target_001_ext_anchor_014
+
+crop_extraction:
+  padding_fraction: 0.05
+  max_padding_fraction: 0.05
+  image_format: png
+
+selection:
+  max_candidates_per_occurrence: 4
+  max_total_candidates: 12
+  min_frame_gap: 12
+  near_duplicate_dhash_hamming_max: 8
+  dhash_size: 8
+
+occurrence_sheets:
+  items_per_sheet: 12
+  expected_sheet_count: 12
+  expected_full_sheets: 11
+  expected_final_sheet_items: 3
+
+review_video:
+  start_frame: 0
+  end_frame: 783
+  watermark: "EXTERNAL HUMAN REVIEW — NO AUTOMATIC IDENTITY OR HARD-NEGATIVE LABEL"
+  draw_frozen_as_reference: true
+  frozen_reference_label: FROZEN_TARGET_REFERENCE
+  no_bbox_interpolation: true
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_review_package
