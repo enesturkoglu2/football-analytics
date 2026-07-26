@@ -1,0 +1,65 @@
+# Stage 5D-F3F — Freeze human external refinement crop decisions.
+# Exact human decisions only. No embeddings, gallery mutation, OCR,
+# similarity, threshold, or identity assignment.
+schema_version: reid_external_refinement_crop_manual_freeze_config_v1
+stage: 5D-F3F
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f3f_external_refinement_crop_manual_freeze_only
+
+project_head_expected: f986c7e34a4c3272a7fdfd892454d5d87780e98a
+project_head_message_expected: Add target 001 external refinement crop review package
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  decode_forbidden: true
+  crop_read_forbidden: true
+  embedding_read_forbidden: true
+  score_row_read_forbidden: true
+  rank_row_read_forbidden: true
+  decision_use_forbidden: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  load_forbidden: true
+  new_embedding_forbidden: true
+
+stage5d_f3e_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_crop_review_package
+  expected_final_status: COMPLETED_STAGE5D_F3E_TARGET_001_EXTERNAL_REFINEMENT_CROP_REVIEW_READY
+  expected_target_candidates: 4
+  expected_hard_negative_candidates: 35
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3E_TARGET_001_CROP_REVIEW_f986c7e.tar.gz
+  expected_snapshot_sha256: c86a5f23c80bc9e4e4dc3527babe25faf692c561ec247f0f265eee211a94b78a
+
+stage5d_f3d_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_manual_freeze
+  expected_final_status: COMPLETED_STAGE5D_F3D_TARGET_001_EXTERNAL_REFINEMENT_DECISIONS_FROZEN
+
+gallery_v1:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v1
+  expected_members: 7
+  npy_load_forbidden: true
+  mutation_forbidden: true
+
+human_freeze:
+  target_id: target_001
+  reviewer: Furkan
+  final_approver: Furkan
+  automated_ocr_used: false
+  automated_team_classifier_used: false
+  similarity_used: false
+  model_identity_used: false
+  decisions_human_approved: true
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_crop_manual_freeze
