@@ -1,0 +1,129 @@
+# Stage 5D-F3E — External refinement crop quality + hard-negative review package.
+# Review package only. No OSNet, OCR, similarity, approvals, or gallery mutation.
+schema_version: reid_external_refinement_crop_review_config_v1
+stage: 5D-F3E
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f3e_external_refinement_crop_review_only
+
+project_head_expected: 8ee00b848da5f24af27cccc01a8adea731941e91
+project_head_message_expected: Freeze target 001 external refinement decisions
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_bytes: 14366504
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+  expected_width: 1332
+  expected_height: 746
+  expected_fps: 30.0
+  expected_frames: 784
+  enrollment_only: true
+  sample_overlap: 0
+  future_evaluation_input: false
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  decode_forbidden: true
+  crop_read_forbidden: true
+  embedding_read_forbidden: true
+  score_row_read_forbidden: true
+  rank_row_read_forbidden: true
+  candidate_selection_forbidden: true
+  quality_selection_forbidden: true
+  gallery_optimization_forbidden: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  load_forbidden: true
+  new_embedding_forbidden: true
+
+stage5d_f3d_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_manual_freeze
+  expected_final_status: COMPLETED_STAGE5D_F3D_TARGET_001_EXTERNAL_REFINEMENT_DECISIONS_FROZEN
+  expected_additional_target: EXT_161
+  expected_distractor_count: 35
+  expected_expansion_sources:
+    - target_001_ext_view_candidate_001
+    - target_001_ext_view_candidate_002
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3D_TARGET_001_EXTERNAL_REFINEMENT_FREEZE_8ee00b8.tar.gz
+  expected_snapshot_sha256: 6c37869b6daa04484dff89afe81280bb1e3e5f7b60e47c09b54784e7dedcbd5f
+
+stage5d_f3c_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_review_package
+
+stage5d_f3b_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_retrieval_error_manual_review_and_refinement_design
+
+stage5d_b1e_b_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_tracking_seed_review_package
+  expected_detection_total: 8355
+  expected_tracking_observations: 7796
+  expected_raw_track_count: 248
+  expected_detection_frames_with_boxes: 784
+
+stage5d_b1e_d_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_anchor_review_package
+
+stage5d_b1e_e_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_anchor_freeze
+  expected_approved_count: 7
+
+gallery_v1:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v1
+  expected_members: 7
+  npy_load_forbidden: true
+  mutation_forbidden: true
+
+existing_gallery_anchor_ids:
+  - target_001_ext_anchor_001
+  - target_001_ext_anchor_003
+  - target_001_ext_anchor_004
+  - target_001_ext_anchor_006
+  - target_001_ext_anchor_008
+  - target_001_ext_anchor_011
+  - target_001_ext_anchor_014
+
+crop_extraction:
+  padding_fraction: 0.05
+  max_padding_fraction: 0.05
+  image_format: png
+
+hard_quality:
+  min_crop_height_px: 64
+  min_crop_width_px: 20
+  min_bbox_area_px2: 1500
+  max_edge_clipping_fraction: 0.20
+  max_person_iou: 0.35
+
+selection:
+  min_frame_gap: 12
+  near_duplicate_dhash_hamming_max: 8
+  dhash_size: 8
+  ext_161_min_candidates: 1
+  ext_161_max_candidates: 4
+  distractor_candidates_per_source: 1
+  temporal_buckets:
+    - early
+    - middle
+    - late
+    - representative-support
+
+contact_sheets:
+  min_width_px: 3600
+  hard_negative_items_per_full_sheet: 12
+  hard_negative_sheet_count: 3
+  hard_negative_final_sheet_items: 11
+
+review_video:
+  context_half_window_sec: 2.5
+  watermark: "HUMAN CROP REVIEW — NOT A HARD-NEGATIVE MEMBER — NO IDENTITY INFERENCE"
+  frozen_source_label: SAME-TEAM DISTRACTOR
+  no_bbox_interpolation: true
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_crop_review_package
