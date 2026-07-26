@@ -1,0 +1,62 @@
+# Stage 5D-F3B — Freeze human retrieval-error findings and external-only
+# refinement design. No scoring, embeddings, gallery mutation, or threshold.
+schema_version: reid_retrieval_error_manual_review_and_refinement_design_config_v1
+stage: 5D-F3B
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f3b_retrieval_error_manual_review_and_refinement_design_only
+
+project_head_expected: 1385b5ba6f82b6d48d4917b3724523388261486b
+project_head_message_expected: Add target 001 retrieval error analysis
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  decode_forbidden: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  load_forbidden: true
+  new_embedding_forbidden: true
+
+stage5d_f3a_diagnostics:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_retrieval_error_analysis_and_diagnostics
+  expected_final_status: COMPLETED_STAGE5D_F3A_TARGET_001_RETRIEVAL_ERROR_ANALYSIS_READY
+  expected_f3_outcome: INDEPENDENT_RETRIEVAL_PROMISING_BUT_OVERLAPPING
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3A_TARGET_001_ERROR_ANALYSIS_1385b5b.tar.gz
+  expected_snapshot_sha256: 1c27bd1703f363596e837507302386683301c840a4f208c0556c87c9c8229294
+
+stage5d_f3_evaluation:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_retrieval_evaluation
+  expected_final_status: COMPLETED_STAGE5D_F3_TARGET_001_INDEPENDENT_RETRIEVAL_EVALUATED
+  expected_segment_ap: 0.5157291205956066
+  expected_segment_margin: -0.036077141761779785
+
+gallery_v1:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v1
+  expected_members: 7
+  npy_load_forbidden: true
+
+policy:
+  sample_used_for_error_analysis_only: true
+  sample_crops_forbidden_for_gallery_enrollment: true
+  sample_negatives_forbidden_for_hard_negative_training: true
+  sample_scores_forbidden_for_formula_weight_optimization: true
+  gallery_mutation: false
+  threshold_selected: false
+  identity_assignment: false
+  new_embeddings: false
+  score_recompute: false
+  refinement_applied: false
+  new_independent_holdout_required: true
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_retrieval_error_manual_review_and_refinement_design
