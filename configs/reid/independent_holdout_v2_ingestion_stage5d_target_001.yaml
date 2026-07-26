@@ -1,0 +1,92 @@
+# Stage 5D-F3I — New independent holdout v2 ingestion and preflight.
+# Metadata + decode integrity + frame-fingerprint independence only.
+# No detection, tracking, crops, embeddings, scoring, GT, threshold, or identity.
+schema_version: reid_independent_holdout_v2_ingestion_config_v1
+stage: 5D-F3I
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f3i_independent_holdout_v2_ingestion_only
+
+project_head_expected: 13d33d7f177c02ccf0f1a3392b7569bd92996444
+project_head_message_expected: Add target 001 target-distractor scoring and holdout design
+
+holdout_source:
+  path: data/test_clips/target_001_independent_holdout_v2.mp4
+  exact_filename: target_001_independent_holdout_v2.mp4
+  must_be_regular_file: true
+  symlink_forbidden: true
+  mutate_forbidden: true
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_bytes: 18842840
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  expected_frames: 1023
+  expected_width: 1336
+  expected_height: 744
+  expected_fps: 30.0
+  expected_format_duration_sec: 34.111979
+  identity_review_forbidden: true
+  crop_read_forbidden: true
+  embedding_read_forbidden: true
+  score_row_read_forbidden: true
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_bytes: 14366504
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+  expected_frames: 784
+  expected_width: 1332
+  expected_height: 746
+  expected_fps: 30.0
+  expected_video_duration_sec: 26.1333
+  expected_format_duration_sec: 26.154646
+  identity_review_forbidden: true
+
+stage5d_f3h_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_target_distractor_scoring_contract_and_holdout_design
+  expected_final_status: COMPLETED_STAGE5D_F3H_TARGET_001_TARGET_DISTRACTOR_SCORING_AND_HOLDOUT_DESIGN_READY
+  expected_primary_formula: TARGET_DISTRACTOR_MAX_MARGIN
+  expected_target_members: 13
+  expected_distractor_members: 23
+  expected_primary_target_top_k: 1
+  expected_primary_distractor_top_k: 1
+  expected_secondary_top_k: 3
+  expected_holdout_required: true
+  expected_holdout_input_pending: true
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3H_TARGET_001_SCORING_DESIGN_13d33d7.tar.gz
+  expected_snapshot_sha256: 09b7844fbd8e298956820456a7f0a1b82742d64f8669a02d68ec86d9aad7e6a3
+
+stage5d_f3g_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v2_and_distractor_gallery_v1
+  expected_external_source_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+
+fingerprint:
+  sampling_rate_fps: 2.0
+  normalize_width: 64
+  normalize_height: 36
+  max_samples_per_source: 3600
+  dhash_hamming_max: 6
+  edge_dhash_hamming_max: 8
+  mad_max: 12
+  confirmed_min_consecutive: 8
+  confirmed_median_dhash_max: 4
+  confirmed_median_mad_max: 8
+  ambiguous_min_consecutive: 4
+  ambiguous_max_consecutive: 7
+  near_duplicate_coverage_ge: 0.90
+  offset_drift_max_samples: 1
+
+user_declaration:
+  user_provided_as_new_independent_holdout: true
+  declared_not_to_be_sample_or_external_copy: true
+  declaration_provenance: user
+  match_session_independence: not_yet_machine_verifiable
+
+target:
+  target_id: target_001
+  target_alias: sarı takım 5 numaralı oyuncu
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_ingestion_and_preflight
+  blocked_ambiguous_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_ingestion_and_preflight_BLOCKED_AMBIGUOUS
