@@ -1,0 +1,80 @@
+# Stage 5D-F3H — Target–distractor scoring contract + new holdout design.
+# Design/preregistration only. No query scoring, sample reads, threshold,
+# identity assignment, gallery mutation, or new embeddings.
+schema_version: reid_target_distractor_scoring_contract_config_v1
+stage: 5D-F3H
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f3h_scoring_contract_and_holdout_design_only
+
+project_head_expected: 0e467c1b7b7203f4e52d186c93eadbafb20c3f9e
+project_head_message_expected: Build target 001 gallery v2 and distractor gallery
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+  decode_forbidden: true
+  read_forbidden: true
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  decode_forbidden: true
+  crop_read_forbidden: true
+  embedding_read_forbidden: true
+  score_row_read_forbidden: true
+  rank_row_read_forbidden: true
+  independent_success_forbidden_after_refinement: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+  load_forbidden: true
+  new_embedding_forbidden: true
+
+stage5d_f3g_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v2_and_distractor_gallery_v1
+  expected_final_status: COMPLETED_STAGE5D_F3G_TARGET_001_GALLERY_V2_AND_DISTRACTOR_GALLERY_BUILT
+  expected_readiness: TARGET_001_GALLERY_V2_AND_DISTRACTOR_GALLERY_READY_FOR_SCORING_DESIGN
+  expected_reused_target_members: 7
+  expected_new_target_members: 6
+  expected_target_members: 13
+  expected_distractor_members: 23
+  expected_target_shape: [13, 512]
+  expected_distractor_shape: [23, 512]
+  expected_target_medoid_id: target_001_ext_anchor_004
+  expected_distractor_medoid_id: target_001_ext_hard_negative_candidate_025
+  expected_target_embedding_sha256: b93e192011ab823264715dbcf485d92246351a209ccf5b913126a12289e86a53
+  expected_distractor_embedding_sha256: c0270eb6858473b2d5f97a1ebc6c9e88e284574b363200755252127aaaacd4b6
+  npy_content_inspection_forbidden: true
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3G_TARGET_001_GALLERY_V2_0e467c1.tar.gz
+  expected_snapshot_sha256: dafb77147ce0c7a72b9eed43ba4b9223f1150709da667f655116b8249644f28c
+
+stage5d_f3b_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_retrieval_error_manual_review_and_refinement_design
+  expected_final_status: COMPLETED_STAGE5D_F3B_TARGET_001_REFINEMENT_DESIGN_READY
+
+stage5d_f1_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_validation_design
+  expected_final_status: COMPLETED_STAGE5D_F1_TARGET_001_INDEPENDENT_VALIDATION_DESIGN_READY
+
+prior_gallery_v1_independent_outcome: INDEPENDENT_RETRIEVAL_PROMISING_BUT_OVERLAPPING
+
+new_independent_holdout:
+  designed_path: data/test_clips/target_001_independent_holdout_v2.mp4
+  required: true
+  may_be_absent_in_this_gate: true
+  forbidden_sources:
+    - data/enrollment_clips/target_001_external_enrollment_v1.mp4
+    - data/test_clips/sample.mp4
+
+target:
+  target_id: target_001
+  target_alias: sarı takım 5 numaralı oyuncu
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_target_distractor_scoring_contract_and_holdout_design
