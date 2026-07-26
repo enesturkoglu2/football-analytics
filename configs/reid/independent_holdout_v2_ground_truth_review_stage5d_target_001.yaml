@@ -1,0 +1,122 @@
+# Stage 5D-F3K — Independent holdout v2 similarity-blind ground-truth review package.
+# Frozen F3J universe only. No gallery/OSNet/similarity/scoring/GT fill/identity.
+schema_version: reid_independent_holdout_v2_ground_truth_review_config_v1
+stage: 5D-F3K
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f3k_ground_truth_review_only
+
+project_head_expected: 09f604fa1feceab3e91d1fcc0bf69cec93dd18a3
+project_head_message_expected: Build target 001 holdout v2 label-blind universe
+
+holdout_source:
+  path: data/test_clips/target_001_independent_holdout_v2.mp4
+  expected_sha256: bbfe3669cfbf39534f71a80131401bb4d9f931c7a4ea485404ab2fa207a6231f
+  expected_bytes: 19569991
+  expected_width: 1336
+  expected_height: 754
+  expected_fps: 30.0
+  expected_frames: 1058
+  expected_duration_sec: 35.306646
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  read_forbidden: true
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  read_forbidden: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  load_forbidden: true
+
+stage5d_f3j_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_label_blind_universe
+  expected_final_status: COMPLETED_STAGE5D_F3J_TARGET_001_NEW_INDEPENDENT_HOLDOUT_LABEL_BLIND_UNIVERSE_BUILT
+  expected_readiness: TARGET_001_INDEPENDENT_HOLDOUT_V2_LABEL_BLIND_UNIVERSE_READY_FOR_GROUND_TRUTH_REVIEW_PACKAGE
+  expected_complete_segments: 243
+  expected_review_eligible: 141
+  expected_review_ineligible: 102
+  expected_detections: 11219
+  expected_assigned_detections: 10533
+  expected_unassigned_detections: 686
+  expected_raw_tracks: 243
+  expected_tracking_observations: 10533
+  expected_pass_through_segments: 243
+  expected_split_segments: 0
+  expected_representative_frame_candidates: 577
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3J_TARGET_001_HOLDOUT_V2_LABEL_BLIND_UNIVERSE_09f604f.tar.gz
+  expected_snapshot_sha256: 5af2ff6d0549d6f136d8bcfe96fbe63505c6517a4e9b469378ca869dac762022
+
+stage5d_f3i_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_ingestion_and_preflight
+  expected_final_status: COMPLETED_STAGE5D_F3I_TARGET_001_NEW_INDEPENDENT_HOLDOUT_INGESTED_AND_PREFLIGHT_PASSED
+
+stage5d_f3h_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_target_distractor_scoring_contract_and_holdout_design
+  metric_contract_relpath: evaluation/target_001_new_holdout_metric_contract.json
+  ground_truth_policy_relpath: evaluation/target_001_new_holdout_ground_truth_policy.json
+
+crop_extraction:
+  padding_fraction: 0.05
+  max_padding_fraction: 0.05
+  image_format: png
+
+hard_quality:
+  min_crop_height_px: 64
+  min_crop_width_px: 20
+  min_bbox_area_px2: 1500
+  max_edge_clipping_fraction: 0.20
+  max_person_iou: 0.35
+
+contact_sheets:
+  sheet_count: 12
+  items_per_full_sheet: 12
+  last_sheet_items: 9
+  min_width_px: 3600
+  grid_cols: 4
+
+review_videos:
+  part_count: 3
+  items_per_part: 47
+  fps: 30
+  pre_pad_sec: 0.5
+  post_pad_sec: 0.5
+  min_clip_sec: 1.0
+  max_clip_sec: 4.0
+  title_card_sec: 0.5
+  codec: libx264
+  pix_fmt: yuv420p
+  crf: 18
+  preset: veryfast
+  watermark: "LABEL-BLIND REVIEW — NO SIMILARITY — NO AUTOMATIC IDENTITY"
+
+target:
+  target_id: target_001
+  target_alias: sarı takım 5 numaralı oyuncu
+  identity_evidence: human_visual_review_only
+  automated_ocr_is_not_identity_evidence: true
+
+policy:
+  similarity_blind: true
+  label_blind: true
+  manual_decisions: false
+  gallery_reads: false
+  embedding_reads: false
+  scoring: false
+  ranking: false
+  metrics: false
+  threshold_selection: false
+  identity_assignment: false
+  gallery_mutation: false
+  detection_inference: false
+  tracking_rerun: false
+  segmentation_rerun: false
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_ground_truth_review_package
