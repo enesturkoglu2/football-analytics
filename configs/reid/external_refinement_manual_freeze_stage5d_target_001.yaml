@@ -1,0 +1,98 @@
+# Stage 5D-F3D — Freeze human external refinement decisions.
+# Exact human decisions only. No embeddings, gallery-v2, OCR, similarity,
+# crop regeneration, or sample access.
+schema_version: reid_external_refinement_manual_freeze_config_v1
+stage: 5D-F3D
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f3d_external_refinement_manual_freeze_only
+
+project_head_expected: 3258df10cda7ec1db2f5f24acec7a8ee4abeeb7b
+project_head_message_expected: Add target 001 external refinement review package
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  decode_forbidden: true
+  crop_read_forbidden: true
+  embedding_read_forbidden: true
+  score_row_read_forbidden: true
+  decision_use_forbidden: true
+  gallery_optimization_forbidden: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  load_forbidden: true
+  new_embedding_forbidden: true
+
+stage5d_f3c_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_review_package
+  expected_final_status: COMPLETED_STAGE5D_F3C_TARGET_001_EXTERNAL_REFINEMENT_REVIEW_READY
+  expected_target_view_candidates: 11
+  expected_unreviewed_occurrences: 135
+  expected_review_eligible_total: 138
+  expected_frozen_target_occurrences: 3
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3C_TARGET_001_EXTERNAL_REFINEMENT_REVIEW_3258df1.tar.gz
+  expected_snapshot_sha256: dc22ef152471eccc157ec634fb8a27d136817f45b59cafd9612402774c518113
+
+stage5d_f3b_refinement_design:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_retrieval_error_manual_review_and_refinement_design
+  expected_final_status: COMPLETED_STAGE5D_F3B_TARGET_001_REFINEMENT_DESIGN_READY
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3B_TARGET_001_REFINEMENT_DESIGN_f98215a.tar.gz
+  expected_snapshot_sha256: 4e1dbf18dbc95e9fd84b0b6e05cabf3ff0d3fb7358729338a987d68b75f85c54
+
+stage5d_b1e_c_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_occurrence_freeze
+  expected_final_status: COMPLETED_STAGE5D_B1E_C_TARGET_001_EXTERNAL_OCCURRENCES_FROZEN
+  expected_selected_positive_count: 3
+
+stage5d_b1e_e_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_anchor_freeze
+  expected_final_status: COMPLETED_STAGE5D_B1E_E_TARGET_001_EXTERNAL_ANCHORS_FROZEN
+  expected_approved_count: 7
+
+gallery_v1:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v1
+  expected_members: 7
+  npy_load_forbidden: true
+  mutation_forbidden: true
+
+target_definition:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_anchor_review_package/target_definition/target_001_definition_frozen.json
+
+human_freeze:
+  target_id: target_001
+  reviewer: Furkan
+  final_approver: Furkan
+  automated_ocr_used: false
+  automated_team_classifier_used: false
+  similarity_used: false
+  model_identity_used: false
+  decisions_human_approved: true
+  transcription_corrections:
+    - from: EXT_016
+      to: EXT_019
+      decision: other_team_player
+    - from: EXT_048
+      to: EXT_049
+      decision: multi_person_ambiguous
+    - from: EXT_065
+      to: EXT_066
+      decision: multi_person_ambiguous
+    - from: EXT_080
+      to: EXT_082
+      decision: other_team_player
+    - from: EXT_228
+      to: EXT_226
+      decision: other_team_player
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_manual_freeze
