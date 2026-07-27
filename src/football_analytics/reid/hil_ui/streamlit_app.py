@@ -35,8 +35,16 @@ from football_analytics.reid.hil_ui.geometry import (  # noqa: E402
     letterbox_params,
     resolve_click_to_bbox,
 )
+from football_analytics.reid.hil_ui.compat import streamlit_image  # noqa: E402
+from football_analytics.reid.hil_ui.gallery_view import (  # noqa: E402
+    validate_gallery_crop_for_display,
+)
 from football_analytics.reid.hil_ui.media import decode_frame_to_cache  # noqa: E402
 from football_analytics.reid.hil_ui.observations import load_observation_lookup  # noqa: E402
+from football_analytics.reid.multi_event_hil.review_clips import (  # noqa: E402
+    bboxes_from_candidates_for_window,
+    extract_event_window_clip,
+)
 from football_analytics.reid.hil.common import sha256_file  # noqa: E402
 from football_analytics.reid.hil.resolve import resolve_effective_decisions  # noqa: E402
 from football_analytics.reid.hil.timeline.approvals import (  # noqa: E402
@@ -240,6 +248,10 @@ def run_app() -> None:
     with tab_review:
         event = session.current_event
         st.info(TRACKING_NOT_RUN_NOTICE)
+        st.info(
+            "Video playback is for review. Clicking and confirming links existing "
+            "tracklets; it does not rerun tracking."
+        )
         st.subheader(f"{event['event_id']} · {event['event_type']}")
         nav1, nav2 = st.columns(2)
         if nav1.button("Previous Event"):
@@ -253,13 +265,74 @@ def run_app() -> None:
 
         start = int(event["review_window_start_frame"])
         end = int(event["review_window_end_frame"])
+
+        # --- Continuous video review (full source + event window) ---
+        if session.package.get("source_video_available"):
+            video_path = Path(session.package["source_video_resolved"])
+            st.markdown("### Full source preview")
+            st.caption(
+                f"Read-only source · SHA `{session.package['source_video_sha256'][:16]}…` · "
+                f"current event window frames {start}–{end}"
+            )
+            try:
+                st.video(str(video_path))
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"Full source playback failed: {exc}")
+
+            man_preview = session.current_manifest()
+            cands_preview = list((man_preview or {}).get("candidates") or [])
+            clip_root = (
+                Path(session.package["writable_session_root_resolved"]) / "review_clips"
+            )
+            try:
+                bbox_map = bboxes_from_candidates_for_window(
+                    cands_preview, start_frame=start, end_frame=end
+                )
+                clip_man = extract_event_window_clip(
+                    source_video=video_path,
+                    source_video_sha256=session.package["source_video_sha256"],
+                    event=event,
+                    output_dir=clip_root,
+                    candidate_bboxes_by_frame=bbox_map,
+                )
+                st.markdown("### Event-window clip")
+                st.caption(
+                    f"Contract window {start}–{end} · no invented padding · "
+                    f"overlay `{Path(clip_man['overlay_clip_path']).name}`"
+                )
+                st.video(clip_man["overlay_clip_path"])
+                with st.expander("Clip technical details"):
+                    st.json(
+                        {
+                            "copy_clip_sha256": clip_man["copy_clip_sha256"],
+                            "overlay_clip_sha256": clip_man["overlay_clip_sha256"],
+                            "source_video_sha256": clip_man["source_video_sha256"],
+                            "duration_seconds": clip_man["duration_seconds"],
+                            "padding_invented": clip_man["padding_invented"],
+                        }
+                    )
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"Event-window clip failed: {exc}")
+
         frame_index = st.slider(
-            "Frame", min_value=start, max_value=max(start, end), value=start
+            "Frame (bbox selection)", min_value=start, max_value=max(start, end), value=start
         )
         st.write(f"Current frame index: {frame_index}")
 
         man = session.current_manifest()
         candidates = sort_candidates_for_display(man["candidates"]) if man else []
+        gallery_ready = bool(
+            (session.package.get("provenance") or {}).get("match_specific_gallery_ready")
+        )
+        if not gallery_ready and any(
+            c.get("appearance_rank") is not None for c in candidates
+        ):
+            st.warning(
+                "Appearance ranks present without match-specific gallery flag; "
+                "treat ranks as helper-only."
+            )
+        if not any(c.get("appearance_rank") is not None for c in candidates):
+            st.info("Match-specific appearance gallery is not ready (no helper ranks).")
         if is_sparse_observations(
             candidates, review_window_start=start, review_window_end=end
         ):
@@ -674,14 +747,23 @@ def run_app() -> None:
 
     with tab_gal:
         st.subheader("Match-specific gallery crop approvals")
+        st.info(
+            "These are multiple views of the same enrolled target tracklet. Approve "
+            "only clear, uncontaminated views for this match-specific appearance gallery."
+        )
         st.caption(
             "Development/old target gallery is forbidden. Approving a crop does not "
-            "auto-expand training use. Timeline eligibility still requires Timeline Approvals."
+            "auto-expand training use. Timeline eligibility still requires Timeline Approvals. "
+            "Approval is disabled unless the crop image is visible and SHA-verified."
         )
         gal_log_path = (session.package.get("provenance") or {}).get(
             "gallery_approval_log_path"
         )
-        crop_man_path = session.package_path.parent / "gallery_crop_candidates" / "enrollment_crop_candidates.json"
+        crop_man_path = (
+            session.package_path.parent
+            / "gallery_crop_candidates"
+            / "enrollment_crop_candidates.json"
+        )
         if not is_product:
             st.warning("Gallery approvals enabled only for product-mode packages.")
         elif not gal_log_path:
@@ -693,31 +775,38 @@ def run_app() -> None:
             )
         else:
             crop_man = json.loads(crop_man_path.read_text(encoding="utf-8"))
-            active = resolve_active_gallery_approvals(
-                GalleryApprovalLog(gal_log_path).read_raw()
-            )
+            gal_log = GalleryApprovalLog(gal_log_path)
+            active = resolve_active_gallery_approvals(gal_log.read_raw())
+            segs = {c.get("segment_id") for c in crop_man.get("candidates") or []}
+            tracks = {str(c.get("raw_track_id")) for c in crop_man.get("candidates") or []}
             st.write(
                 {
                     "candidate_count": crop_man.get("candidate_count"),
+                    "same_segment_ids": sorted(segs),
+                    "same_raw_tracks": sorted(tracks),
                     "active_approvals": len(active),
                     "automatic_gallery_expansion": False,
+                    "note": "Not five different players — views of one enrolled tracklet.",
                 }
             )
             match_id = (session.package.get("provenance") or {}).get("match_id") or "unknown"
             analysis_run_id = session.package.get("run_id")
+            st.text_input("Gallery reviewer", key="gal_reviewer", value="hil_gallery_reviewer")
             for crop in crop_man.get("candidates") or []:
+                validation = validate_gallery_crop_for_display(crop)
                 cols = st.columns([2, 3, 1])
                 with cols[0]:
-                    try:
+                    if validation["visible"]:
                         from PIL import Image
 
-                        cols[0].image(
+                        streamlit_image(
+                            cols[0],
                             Image.open(crop["crop_path"]),
                             caption=crop["crop_id"],
-                            use_container_width=True,
+                            use_column_width=True,
                         )
-                    except Exception as exc:  # noqa: BLE001
-                        cols[0].write(str(exc))
+                    else:
+                        cols[0].error(validation.get("error") or "image not visible")
                 cols[1].write(
                     {
                         "crop_id": crop["crop_id"],
@@ -725,32 +814,79 @@ def run_app() -> None:
                         "view_hint": crop.get("view_hint"),
                         "segment_id": crop["segment_id"],
                         "raw_track_id": crop["raw_track_id"],
+                        "image_dimensions": [
+                            validation.get("width"),
+                            validation.get("height"),
+                        ],
+                        "blur_visibility_metadata": crop.get("visibility") or {},
+                        "contamination_metadata": crop.get("contamination")
+                        or crop.get("provenance", {}).get("contamination")
+                        or {},
                         "approved": crop["crop_id"] in active,
+                        "approval_enabled": validation["approval_enabled"],
+                        "sha_ok": validation.get("actual_sha256")
+                        == str(crop.get("crop_sha256") or "").lower(),
                     }
                 )
+                already = crop["crop_id"] in active
+                approve_disabled = (not validation["approval_enabled"]) or already
                 if cols[2].button(
                     "Approve gallery member",
                     key=f"gal_{crop['crop_id']}",
-                    disabled=crop["crop_id"] in active,
+                    disabled=approve_disabled,
                 ):
                     try:
+                        if not validation["approval_enabled"]:
+                            raise RuntimeError("approval blocked: image not verified visible")
                         record = build_gallery_approval(
-                            approval_id=f"gal_{crop['crop_id']}_{len(GalleryApprovalLog(gal_log_path).read_raw())+1:04d}",
+                            approval_id=(
+                                f"gal_{crop['crop_id']}_"
+                                f"{len(gal_log.read_raw()) + 1:04d}"
+                            ),
                             crop=crop,
                             match_id=str(match_id),
                             analysis_run_id=str(analysis_run_id),
                             target_id=session.package["target_id"],
                             product_package_id=session.package["package_id"],
-                            reviewer=st.session_state.get("gal_reviewer", "hil_gallery_reviewer"),
+                            reviewer=st.session_state.get(
+                                "gal_reviewer", "hil_gallery_reviewer"
+                            ),
                         )
-                        GalleryApprovalLog(gal_log_path).append(record)
+                        gal_log.append(record)
                         st.success(f"Gallery approval appended for {crop['crop_id']}")
                         st.rerun()
                     except Exception as exc:  # noqa: BLE001
                         st.error(str(exc))
-            st.text_input("Gallery reviewer", key="gal_reviewer", value="hil_gallery_reviewer")
-            st.write("Gallery approval log")
-            st.json(GalleryApprovalLog(gal_log_path).read_raw())
+                if already and cols[2].button(
+                    "Revoke gallery approval",
+                    key=f"gal_revoke_{crop['crop_id']}",
+                ):
+                    try:
+                        tip = active[crop["crop_id"]]
+                        record = build_gallery_approval(
+                            approval_id=(
+                                f"gal_{crop['crop_id']}_"
+                                f"{len(gal_log.read_raw()) + 1:04d}"
+                            ),
+                            crop=crop,
+                            match_id=str(match_id),
+                            analysis_run_id=str(analysis_run_id),
+                            target_id=session.package["target_id"],
+                            product_package_id=session.package["package_id"],
+                            reviewer=st.session_state.get(
+                                "gal_reviewer", "hil_gallery_reviewer"
+                            ),
+                            approval_status="revoked",
+                            supersedes_approval_id=tip["approval_id"],
+                            comment="revoked_via_ui",
+                        )
+                        gal_log.append(record)
+                        st.success(f"Gallery approval revoked for {crop['crop_id']}")
+                        st.rerun()
+                    except Exception as exc:  # noqa: BLE001
+                        st.error(str(exc))
+            st.write("Gallery approval log (append-only)")
+            st.json(gal_log.read_raw())
 
 
 def main() -> None:
