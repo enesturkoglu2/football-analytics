@@ -38,5 +38,8 @@ Ana ortamlar (`football-cv`, `sn-reid-cpu`) değiştirilmez.
 - `src/football_analytics/reid/hil_ui/` — review package, geometry, queue, decisions service, Streamlit app
 - HIL-A: `src/football_analytics/reid/hil/`
 
-## Smoke paketleri
-Gate çıktısında fixture ve existing-artifact review package’leri üretilir.
+## HIL-B-R1 usability repair
+- Direct click: `streamlit-image-coordinates==0.1.9` (MIT, local-only) + `Select this player`
+- Selected tracklet highlight / not-visible message / sparse observation notice
+- Confirmation: human summary first; raw JSON under Advanced
+- Next acceptance gate: `REID_HIL_B_R2_HUMAN_ACCEPTANCE_SESSION`

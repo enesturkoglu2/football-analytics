@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 import os
 from pathlib import Path
 from typing import Any
@@ -13,10 +12,6 @@ HELPER_WARNING = "SportsReID is a helper ranker; it does not confirm identity."
 
 
 def _ensure_src_path() -> None:
-    root = Path(__file__).resolve().parents[3]  # .../src
-    # football_analytics lives under src/
-    src_root = root if root.name == "src" else Path(__file__).resolve().parents[4] / "src"
-    # __file__ = .../src/football_analytics/reid/hil_ui/streamlit_app.py → parents[3]=src
     import sys
 
     src = Path(__file__).resolve().parents[3]
@@ -27,12 +22,8 @@ def _ensure_src_path() -> None:
 _ensure_src_path()
 
 from football_analytics.reid.hil.decisions import DecisionAction  # noqa: E402
-from football_analytics.reid.hil_ui.actions import map_ui_action  # noqa: E402
-from football_analytics.reid.hil_ui.candidates_view import (  # noqa: E402
-    find_candidate_covering_bbox,
-    sort_candidates_for_display,
-    sportsreid_display_fields,
-)
+from football_analytics.reid.hil_ui.actions import map_ui_action, preview_confirmation  # noqa: E402
+from football_analytics.reid.hil_ui.candidates_view import sort_candidates_for_display  # noqa: E402
 from football_analytics.reid.hil_ui.decisions_service import (  # noqa: E402
     correct_or_revoke,
     history_for_event,
@@ -44,7 +35,21 @@ from football_analytics.reid.hil_ui.geometry import (  # noqa: E402
     resolve_click_to_bbox,
 )
 from football_analytics.reid.hil_ui.media import decode_frame_to_cache  # noqa: E402
+from football_analytics.reid.hil_ui.observations import load_observation_lookup  # noqa: E402
 from football_analytics.reid.hil_ui.session import open_review_session  # noqa: E402
+from football_analytics.reid.hil_ui.visualization import (  # noqa: E402
+    SPARSE_PACKAGE_NOTICE,
+    SUBMIT_SUCCESS_MESSAGE,
+    TRACKING_NOT_RUN_NOTICE,
+    action_requires_selection,
+    appearance_rank_label,
+    build_selection_from_bbox_hit,
+    confirmation_user_summary,
+    is_sparse_observations,
+    observation_frames,
+    selection_summary_card,
+    selection_visibility,
+)
 
 
 def _package_path_from_env() -> Path:
@@ -56,48 +61,96 @@ def _package_path_from_env() -> Path:
     return Path(raw).expanduser().resolve()
 
 
-def _frame_bboxes_for_event(session, frame_index: int) -> list[dict[str, Any]]:
+def _frame_bboxes_for_event(
+    session,
+    frame_index: int,
+    observation_lookup: dict[tuple[str, int], list[float]],
+) -> list[dict[str, Any]]:
     man = session.current_manifest()
     rows: list[dict[str, Any]] = []
     if not man:
         return rows
+    seen_segments: set[str] = set()
     for cand in man.get("candidates", []):
+        seg = cand["segment_id"]
+        bbox = None
         for ref in cand.get("bbox_references") or []:
-            if int(ref["frame_index"]) != int(frame_index):
-                # Also expose middle-frame refs when seeking nearby? Only exact frame.
-                continue
-            rows.append(
-                {
-                    "bbox_id": f"{cand['candidate_id']}:{ref['frame_index']}",
-                    "candidate_id": cand["candidate_id"],
-                    "segment_id": cand["segment_id"],
-                    "raw_track_id": cand["raw_track_id"],
-                    "bbox_xyxy": list(ref["bbox_xyxy"]),
-                    "provenance": {
-                        "listed_candidate": True,
-                        "appearance_rank": cand.get("appearance_rank"),
-                        "T_max": cand.get("T_max"),
-                        "D_max": cand.get("D_max"),
-                        "S": cand.get("S"),
-                        "sportsreid_model_id": cand.get("sportsreid_model_id"),
-                        "sportsreid_checkpoint_sha256": cand.get(
-                            "sportsreid_checkpoint_sha256"
-                        ),
-                    },
-                }
-            )
-    # Optional extra eligible boxes from package metadata (direct-only universe)
+            if int(ref["frame_index"]) == int(frame_index):
+                bbox = list(ref["bbox_xyxy"])
+                break
+        if bbox is None:
+            hit = observation_lookup.get((seg, int(frame_index)))
+            if hit is not None:
+                bbox = list(hit)
+        if bbox is None:
+            continue
+        seen_segments.add(seg)
+        rows.append(
+            {
+                "bbox_id": f"{cand['candidate_id']}:{frame_index}",
+                "candidate_id": cand["candidate_id"],
+                "segment_id": seg,
+                "raw_track_id": cand["raw_track_id"],
+                "bbox_xyxy": bbox,
+                "provenance": {
+                    "listed_candidate": True,
+                    "appearance_rank": cand.get("appearance_rank"),
+                    "T_max": cand.get("T_max"),
+                    "D_max": cand.get("D_max"),
+                    "S": cand.get("S"),
+                    "sportsreid_model_id": cand.get("sportsreid_model_id"),
+                    "sportsreid_checkpoint_sha256": cand.get(
+                        "sportsreid_checkpoint_sha256"
+                    ),
+                },
+            }
+        )
     extras = (session.package.get("provenance") or {}).get("extra_frame_bboxes") or {}
     for item in extras.get(str(frame_index), []):
         rows.append(dict(item))
     return rows
 
 
+def _draw_overlay_image(
+    *,
+    base_rgb,
+    bboxes: list[dict[str, Any]],
+    selected_bbox: list[float] | None,
+    display_w: int,
+):
+    import cv2
+    import numpy as np
+    from PIL import Image
+
+    frame = np.asarray(base_rgb).copy()
+    for b in bboxes:
+        x1, y1, x2, y2 = [int(round(v)) for v in b["bbox_xyxy"]]
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (0, 220, 220), 2)
+    if selected_bbox is not None:
+        x1, y1, x2, y2 = [int(round(v)) for v in selected_bbox]
+        cv2.rectangle(frame, (x1, y1), (x2, y2), (255, 64, 0), 4)
+        cv2.putText(
+            frame,
+            "SELECTED TARGET CANDIDATE",
+            (x1, max(20, y1 - 8)),
+            cv2.FONT_HERSHEY_SIMPLEX,
+            0.55,
+            (255, 64, 0),
+            2,
+            cv2.LINE_AA,
+        )
+    img = Image.fromarray(frame)
+    frame_w, frame_h = img.size
+    scale = display_w / float(frame_w)
+    display_h = max(1, int(round(frame_h * scale)))
+    shown = img.resize((display_w, display_h))
+    return shown, frame_w, frame_h, display_w, display_h
+
+
 def run_app() -> None:
     import streamlit as st
-    import plotly.graph_objects as go
     from PIL import Image
-    import numpy as np
+    from streamlit_image_coordinates import streamlit_image_coordinates
 
     st.set_page_config(page_title="HIL Offline Review", layout="wide")
     st.title("Target Recovery Offline Review")
@@ -107,6 +160,8 @@ def run_app() -> None:
     package_path = _package_path_from_env()
     if "session" not in st.session_state:
         st.session_state.session = open_review_session(package_path)
+    if "selection" not in st.session_state:
+        st.session_state.selection = {}
     session = st.session_state.session
 
     tab_pkg, tab_queue, tab_review, tab_hist = st.tabs(
@@ -115,10 +170,16 @@ def run_app() -> None:
 
     with tab_pkg:
         summary = session.package_summary()
-        st.json(summary)
         st.write(
-            "Users cannot browse arbitrary filesystem paths; package is fixed by launch env."
+            {
+                "package_id": summary["package_id"],
+                "target_id": summary["target_id"],
+                "event_count": summary["event_count"],
+                "decision_log_path": summary["decision_log_path"],
+            }
         )
+        with st.expander("Advanced technical details"):
+            st.json(summary)
 
     with tab_queue:
         filt = st.selectbox(
@@ -143,32 +204,55 @@ def run_app() -> None:
                 for i, ev in enumerate(session.events):
                     if ev["event_id"] == row["event_id"]:
                         session.set_event_index(i)
+                        st.session_state.selection = {}
                         break
+                st.rerun()
 
     with tab_review:
         event = session.current_event
+        st.info(TRACKING_NOT_RUN_NOTICE)
         st.subheader(f"{event['event_id']} · {event['event_type']}")
         nav1, nav2 = st.columns(2)
         if nav1.button("Previous Event"):
             session.previous_event()
+            st.session_state.selection = {}
             st.rerun()
         if nav2.button("Next Event"):
             session.next_event()
+            st.session_state.selection = {}
             st.rerun()
 
         start = int(event["review_window_start_frame"])
         end = int(event["review_window_end_frame"])
-        frame_index = st.slider("Frame", min_value=start, max_value=max(start, end), value=start)
+        frame_index = st.slider(
+            "Frame", min_value=start, max_value=max(start, end), value=start
+        )
         st.write(f"Current frame index: {frame_index}")
 
         man = session.current_manifest()
         candidates = sort_candidates_for_display(man["candidates"]) if man else []
-        st.info(f"Showing all {len(candidates)} candidates (no top-k hiding).")
+        if is_sparse_observations(
+            candidates, review_window_start=start, review_window_end=end
+        ):
+            st.warning(SPARSE_PACKAGE_NOTICE)
 
-        bboxes = _frame_bboxes_for_event(session, frame_index)
-        display_w, display_h = 640, 360
-        params = None
-        img_arr = None
+        seg_ids = {c["segment_id"] for c in candidates}
+        obs_path = (session.package.get("provenance") or {}).get("observation_index_path")
+        observation_lookup = load_observation_lookup(
+            obs_path,
+            segment_ids=seg_ids,
+            frame_min=start,
+            frame_max=end,
+        )
+
+        bboxes = _frame_bboxes_for_event(session, frame_index, observation_lookup)
+        vis = selection_visibility(
+            selection=st.session_state.selection or None,
+            frame_index=frame_index,
+            candidates=candidates,
+            observation_lookup=observation_lookup,
+        )
+        display_w = 960
 
         if session.package.get("source_video_available"):
             cache_root = (
@@ -181,146 +265,149 @@ def run_app() -> None:
                 frame_index=frame_index,
                 cache_root=cache_root,
                 read_only_roots=ro,
-                overlay_bboxes=[b["bbox_xyxy"] for b in bboxes],
+                overlay_bboxes=None,
             )
-            img = Image.open(decoded["path"]).convert("RGB")
-            frame_w, frame_h = img.size
-            params = letterbox_params(
-                frame_w=frame_w, frame_h=frame_h, display_w=display_w, display_h=display_h
-            )
-            img_arr = np.asarray(img.resize((display_w, display_h)))
+            base = Image.open(decoded["path"]).convert("RGB")
         else:
-            st.warning("Source media unavailable — bbox click uses synthetic canvas.")
-            frame_w, frame_h = 320, 240
-            params = letterbox_params(
-                frame_w=frame_w, frame_h=frame_h, display_w=display_w, display_h=display_h
-            )
-            canvas = np.zeros((display_h, display_w, 3), dtype=np.uint8)
-            canvas[:] = (30, 30, 30)
-            img_arr = canvas
+            st.warning("Source media unavailable.")
+            base = Image.new("RGB", (320, 240), (30, 30, 30))
 
-        fig = go.Figure(go.Image(z=img_arr))
-        for b in bboxes:
-            x1, y1, x2, y2 = b["bbox_xyxy"]
-            # map frame→display with letterbox
-            assert params is not None
-            dx1 = params.pad_x + x1 * params.scale
-            dy1 = params.pad_y + y1 * params.scale
-            dx2 = params.pad_x + x2 * params.scale
-            dy2 = params.pad_y + y2 * params.scale
-            fig.add_shape(
-                type="rect",
-                x0=dx1,
-                y0=dy1,
-                x1=dx2,
-                y1=dy2,
-                line=dict(color="yellow", width=2),
-            )
-        fig.update_layout(
-            width=display_w,
-            height=display_h,
-            margin=dict(l=0, r=0, t=0, b=0),
-            dragmode=False,
+        shown, frame_w, frame_h, disp_w, disp_h = _draw_overlay_image(
+            base_rgb=base,
+            bboxes=bboxes,
+            selected_bbox=vis.get("bbox_xyxy"),
+            display_w=display_w,
         )
-        fig.update_xaxes(visible=False, range=[0, display_w])
-        fig.update_yaxes(visible=False, range=[display_h, 0])
+        # Uniform scale (no letterbox pad): click coords map by simple ratio.
+        params = letterbox_params(
+            frame_w=frame_w,
+            frame_h=frame_h,
+            display_w=disp_w,
+            display_h=disp_h,
+        )
 
-        selection = st.plotly_chart(
-            fig,
-            on_select="rerun",
-            selection_mode="points",
-            key=f"frame_plot_{event['event_id']}_{frame_index}",
+        st.caption(
+            "Click a yellow box on the image to select a player "
+            "(direct click). Overlay shapes are burned into the image."
         )
-        # Fallback: numeric click entry for deterministic tests / environments
-        with st.expander("Manual click coordinates (UI pixels)"):
-            cx = st.number_input("ui_x", value=0.0)
-            cy = st.number_input("ui_y", value=0.0)
-            if st.button("Resolve click"):
-                result = resolve_click_to_bbox(
-                    ui_x=float(cx), ui_y=float(cy), params=params, bboxes=bboxes
+        click = streamlit_image_coordinates(
+            shown,
+            key=f"img_click_{event['event_id']}_{frame_index}",
+            width=disp_w,
+        )
+        if click and "x" in click and "y" in click:
+            result = resolve_click_to_bbox(
+                ui_x=float(click["x"]),
+                ui_y=float(click["y"]),
+                params=params,
+                bboxes=bboxes,
+            )
+            if result.status == "hit" and result.selected is not None:
+                meta = {}
+                for b in bboxes:
+                    if b["bbox_id"] == result.selected.bbox_id:
+                        meta = {
+                            "segment_id": b.get("segment_id"),
+                            "raw_track_id": b.get("raw_track_id"),
+                            "bbox_id": b.get("bbox_id"),
+                            **dict(b.get("provenance") or {}),
+                        }
+                        break
+                st.session_state.selection = build_selection_from_bbox_hit(
+                    frame_index=frame_index,
+                    bbox_xyxy=result.selected.bbox_xyxy,
+                    candidates=candidates,
+                    hit_meta=meta,
                 )
-                st.write(result)
-                if result.status == "hit" and result.selected is not None:
-                    listed = find_candidate_covering_bbox(
-                        candidates,
-                        frame_index=frame_index,
-                        bbox_xyxy=result.selected.bbox_xyxy,
+                st.success(
+                    "Image click selection applied"
+                    + (
+                        " (direct)"
+                        if st.session_state.selection.get("direct_bbox_selection")
+                        else " (listed)"
                     )
-                    session.selection = {
-                        "selected_candidate_id": None if listed is None else listed["candidate_id"],
-                        "selected_segment_id": (
-                            listed["segment_id"]
-                            if listed
-                            else result.selected.provenance.get("segment_id")
-                            or result.selected.bbox_id
-                        ),
-                        "selected_raw_track_id": (
-                            listed["raw_track_id"]
-                            if listed
-                            else result.selected.provenance.get("raw_track_id")
-                        ),
-                        "selected_frame_index": frame_index,
-                        "selected_bbox_xyxy": list(result.selected.bbox_xyxy),
-                        "direct_bbox_selection": listed is None,
-                        "listed_selection": listed is not None,
-                        "displayed_rank": None
-                        if listed is None
-                        else listed.get("appearance_rank"),
-                        "displayed_score": None if listed is None else listed.get("S"),
-                        "displayed_T_max": None if listed is None else listed.get("T_max"),
-                        "displayed_D_max": None if listed is None else listed.get("D_max"),
-                        "displayed_model_id": None
-                        if listed is None
-                        else listed.get("sportsreid_model_id"),
-                        "displayed_checkpoint_sha256": None
-                        if listed is None
-                        else listed.get("sportsreid_checkpoint_sha256"),
-                    }
-                    if listed is None:
-                        st.warning("Direct non-candidate bbox selection")
-                    else:
-                        st.success(f"Listed candidate selected: {listed['candidate_id']}")
-
-        # Plotly native click (best-effort)
-        try:
-            points = selection.selection.points if selection and selection.selection else []
-            if points:
-                pt = points[0]
-                ux = float(pt.get("x", 0))
-                uy = float(pt.get("y", 0))
-                result = resolve_click_to_bbox(
-                    ui_x=ux, ui_y=uy, params=params, bboxes=bboxes
                 )
-                st.write({"plotly_click": {"x": ux, "y": uy}, "resolution": result.status})
-        except Exception:  # noqa: BLE001
-            pass
+            elif result.status == "miss":
+                st.caption("Click did not land inside a bbox.")
 
-        st.write("Current selection:", session.selection or None)
+        st.subheader("Players visible in this frame")
+        if not bboxes:
+            st.write("No bbox observations on this frame.")
+        for b in bboxes:
+            label = (
+                f"{b.get('candidate_id') or b['bbox_id']} · "
+                f"{b.get('segment_id')} · track {b.get('raw_track_id')}"
+            )
+            if st.button(f"Select this player · {label}", key=f"pick_{b['bbox_id']}"):
+                st.session_state.selection = build_selection_from_bbox_hit(
+                    frame_index=frame_index,
+                    bbox_xyxy=b["bbox_xyxy"],
+                    candidates=candidates,
+                    hit_meta={
+                        "segment_id": b.get("segment_id"),
+                        "raw_track_id": b.get("raw_track_id"),
+                        "bbox_id": b.get("bbox_id"),
+                        **dict(b.get("provenance") or {}),
+                    },
+                )
+                st.rerun()
+
+        card = selection_summary_card(st.session_state.selection or None)
+        if card:
+            st.success("Current selection")
+            st.write(card)
+            if vis.get("visible"):
+                st.markdown(f"**{vis['label']}** (highlighted on frame {frame_index})")
+            else:
+                st.warning(vis.get("message"))
+        else:
+            st.info("No selection yet.")
 
         st.subheader("Candidates")
+        st.caption(f"Showing all {len(candidates)} candidates (no top-k hiding).")
         for cand in candidates:
-            with st.expander(
-                f"{cand['candidate_id']} · rank={cand.get('appearance_rank')} · "
-                f"seg={cand['segment_id']}"
-            ):
-                st.json(sportsreid_display_fields(cand))
+            title = (
+                f"{cand['candidate_id']} · {appearance_rank_label(cand)} · "
+                f"{cand['segment_id']}"
+            )
+            with st.expander(title):
+                frames = observation_frames(cand)
                 st.write(
                     {
+                        "segment_id": cand["segment_id"],
                         "raw_track_id": cand["raw_track_id"],
-                        "frames": [cand["start_frame"], cand["middle_frame"], cand["end_frame"]],
-                        "quality": cand.get("quality"),
-                        "contamination": cand.get("contamination"),
+                        "start_middle_end": [
+                            cand["start_frame"],
+                            cand["middle_frame"],
+                            cand["end_frame"],
+                        ],
+                        "observation_frames_in_manifest": frames,
+                        "frame_availability": (
+                            "sparse" if len(frames) <= 2 else "dense_in_manifest"
+                        ),
+                        "appearance": appearance_rank_label(cand),
                     }
                 )
-                if st.button("Select listed", key=f"sel_{cand['candidate_id']}"):
+                selected = (
+                    st.session_state.selection or {}
+                ).get("selected_candidate_id") == cand["candidate_id"]
+                if selected:
+                    st.markdown("**Selected**")
+                if st.button(
+                    "Select this candidate", key=f"sel_{cand['candidate_id']}"
+                ):
                     refs = cand.get("bbox_references") or []
                     ref = refs[0] if refs else None
-                    session.selection = {
+                    st.session_state.selection = {
                         "selected_candidate_id": cand["candidate_id"],
                         "selected_segment_id": cand["segment_id"],
                         "selected_raw_track_id": cand["raw_track_id"],
-                        "selected_frame_index": None if ref is None else ref["frame_index"],
-                        "selected_bbox_xyxy": None if ref is None else list(ref["bbox_xyxy"]),
+                        "selected_frame_index": None
+                        if ref is None
+                        else ref["frame_index"],
+                        "selected_bbox_xyxy": None
+                        if ref is None
+                        else list(ref["bbox_xyxy"]),
                         "direct_bbox_selection": False,
                         "listed_selection": True,
                         "displayed_rank": cand.get("appearance_rank"),
@@ -332,6 +419,23 @@ def run_app() -> None:
                             "sportsreid_checkpoint_sha256"
                         ),
                     }
+                    st.rerun()
+
+        with st.expander("Advanced / debug: manual pixel coordinates"):
+            cx = st.number_input("ui_x", value=0.0)
+            cy = st.number_input("ui_y", value=0.0)
+            if st.button("Resolve debug click"):
+                result = resolve_click_to_bbox(
+                    ui_x=float(cx), ui_y=float(cy), params=params, bboxes=bboxes
+                )
+                st.write(
+                    {
+                        "status": result.status,
+                        "selected": None
+                        if result.selected is None
+                        else result.selected.bbox_id,
+                    }
+                )
 
         reviewer = st.text_input("Reviewer", value="hil_b_reviewer")
         comment = st.text_area("Comment", value="")
@@ -352,22 +456,36 @@ def run_app() -> None:
             "Revoke Decision",
         ]
         chosen = st.selectbox("Action", action_labels)
+        needs_sel = action_requires_selection(chosen)
+        has_sel = bool(st.session_state.selection)
+
         if chosen == "Confirm Target":
-            st.write("Confirmation preview")
-            from football_analytics.reid.hil_ui.actions import preview_confirmation
-
-            st.json(
-                preview_confirmation(
-                    action=DecisionAction.CONFIRM_TARGET,
-                    selection=session.selection,
-                    reviewer=reviewer,
-                    comment=comment,
+            st.subheader("Confirmation")
+            st.write(
+                confirmation_user_summary(
+                    action="CONFIRM_TARGET",
+                    selection=st.session_state.selection or None,
                     confidence=confidence,
-                ).to_dict()
+                )
             )
+            with st.expander("Advanced technical details"):
+                st.json(
+                    preview_confirmation(
+                        action=DecisionAction.CONFIRM_TARGET,
+                        selection=st.session_state.selection,
+                        reviewer=reviewer,
+                        comment=comment,
+                        confidence=confidence,
+                    ).to_dict()
+                )
 
-        if st.button("Submit decision"):
+        submit_disabled = needs_sel and not has_sel
+        if submit_disabled:
+            st.warning("Confirm/Reject requires a selection.")
+
+        if st.button("Submit decision", disabled=submit_disabled):
             try:
+                sel = st.session_state.selection or {}
                 if chosen == "Undo Last Decision":
                     result = undo_last_decision(
                         session.decision_log,
@@ -385,7 +503,7 @@ def run_app() -> None:
                         reviewer=reviewer,
                         action=act,
                         comment=comment,
-                        selection=session.selection,
+                        selection=sel,
                     )
                 else:
                     act = map_ui_action(chosen)
@@ -395,29 +513,41 @@ def run_app() -> None:
                         candidate_manifest=man,
                         action=act,
                         reviewer=reviewer,
-                        selection=session.selection,
+                        selection=sel,
                         comment=comment,
                         confidence=confidence,
                         training_use_approved=False,
                         gallery_use_approved=False,
                     )
-                st.success("Appended to decision log")
-                st.json(
-                    {
-                        "decision_id": result["decision"]["decision_id"],
-                        "action": result["decision"]["action"],
-                        "revision": result["decision"]["revision"],
-                        "log_sha256": result["log_integrity"]["sha256"],
-                    }
-                )
+                st.success(SUBMIT_SUCCESS_MESSAGE)
+                with st.expander("Advanced technical details"):
+                    st.json(
+                        {
+                            "decision_id": result["decision"]["decision_id"],
+                            "action": result["decision"]["action"],
+                            "revision": result["decision"]["revision"],
+                            "direct_bbox_selection": result["decision"].get(
+                                "direct_bbox_selection"
+                            ),
+                            "log_sha256": result["log_integrity"]["sha256"],
+                        }
+                    )
             except Exception as exc:  # noqa: BLE001
                 st.error(str(exc))
 
     with tab_hist:
         event = session.current_event
         hist = history_for_event(session.decision_log, event["event_id"])
-        st.write("Append-only raw records (edit/delete UI not provided)")
-        st.json(hist)
+        st.write("Append-only history (edit/delete yok). Revoke/Correct actions above.")
+        st.write(
+            {
+                "review_state": hist["review_state"],
+                "effective": hist["effective_active_decision"],
+                "chain_len": len(hist["supersedes_chain"]),
+            }
+        )
+        with st.expander("Advanced technical details"):
+            st.json(hist)
 
 
 def main() -> None:

@@ -11,3 +11,4 @@ dependencies:
       - opencv-python-headless==4.10.0.84
       - PyYAML==6.0.2
       - numpy==1.26.4
+      - streamlit-image-coordinates==0.1.9

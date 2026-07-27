@@ -310,19 +310,44 @@ def build_existing_artifact_review_package(
     if chosen_frame is None:
         raise RuntimeError("could not find a frame with >=4 eligible segment bboxes")
 
+    # Collect sparse start/end refs for the same segments (not continuous tracking).
+    end_frame = chosen_frame + 5
+    by_seg_frame: dict[tuple[str, int], list[float]] = {
+        (row["segment_id"], chosen_frame): list(row["bbox_xyxy"]) for row in chosen_rows
+    }
+    with obs_path.open(encoding="utf-8") as handle:
+        for line in handle:
+            row = json.loads(line)
+            key = (row["segment_id"], int(row["frame_index"]))
+            if key[0] in {r["segment_id"] for r in chosen_rows} and key[1] == end_frame:
+                by_seg_frame[key] = list(row["bbox_xyxy"])
+
     candidates = []
     for i, row in enumerate(chosen_rows, start=1):
+        seg = row["segment_id"]
+        refs = [
+            {
+                "frame_index": chosen_frame,
+                "bbox_xyxy": list(by_seg_frame[(seg, chosen_frame)]),
+            }
+        ]
+        end_key = (seg, end_frame)
+        if end_key in by_seg_frame:
+            refs.append(
+                {
+                    "frame_index": end_frame,
+                    "bbox_xyxy": list(by_seg_frame[end_key]),
+                }
+            )
         candidates.append(
             {
                 "candidate_id": f"real_cand_{i:03d}",
-                "segment_id": row["segment_id"],
+                "segment_id": seg,
                 "raw_track_id": row["raw_track_code"],
-                "start_frame": max(0, chosen_frame - 5),
+                "start_frame": chosen_frame,
                 "middle_frame": chosen_frame,
-                "end_frame": chosen_frame + 5,
-                "bbox_references": [
-                    {"frame_index": chosen_frame, "bbox_xyxy": list(row["bbox_xyxy"])}
-                ],
+                "end_frame": end_frame,
+                "bbox_references": refs,
                 "crop_path": None,
                 "crop_sha256": None,
                 "context_paths": {},
@@ -443,6 +468,9 @@ def build_existing_artifact_review_package(
             "gt_prefill": False,
             "chosen_frame": chosen_frame,
             "candidate_segment_ids": [c["segment_id"] for c in candidates],
+            "observation_index_path": str(obs_path),
+            "sparse_observations": True,
+            "not_continuous_tracking_preview": True,
         },
         "media_status": "verified",
     }
