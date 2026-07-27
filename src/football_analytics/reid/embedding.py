@@ -44,6 +44,12 @@ IMAGENET_MEAN = (0.485, 0.456, 0.406)
 IMAGENET_STD = (0.229, 0.224, 0.225)
 DEFAULT_BATCH_SIZE = 8
 
+# Explicit ReID model IDs (see configs/reid/model_registry.yaml). No silent fallback.
+MODEL_ID_MARKET1501 = "osnet_x1_0_market1501"
+MODEL_ID_SPORTSREID_SOCCERNET = "osnet_x1_0_sportsreid_soccernet"
+DEFAULT_SN_REID_COMMIT = "621e2b0f2d2a7a3e207b8dd747542b6608bf72db"
+DEFAULT_SN_REID_ROOT = "/home/enesturkoglu2/projects/soccernet/sn-reid"
+
 INDEX_SCHEMA_VERSION = "reid_crop_embedding_index_v1"
 SUMMARY_SCHEMA_VERSION = "reid_embedding_summary_v1"
 
@@ -682,3 +688,127 @@ def run_extract_reid_embeddings(
         "device": "cpu",
         "summary": summary,
     }
+
+
+def load_reid_osnet_by_model_id(
+    model_id: str,
+    *,
+    sn_reid_root: str | Path | None = None,
+    expected_sn_reid_commit: str | None = None,
+    registry_path: str | Path | None = None,
+    checkpoint_path_override: str | Path | None = None,
+) -> dict[str, Any]:
+    """Load an OSNet ReID model by explicit ``model_id`` (no silent fallback).
+
+    - ``osnet_x1_0_market1501``: existing torchreid weight loader (unchanged).
+    - ``osnet_x1_0_sportsreid_soccernet``: sanitized state-dict + ``weights_only=True``.
+    """
+    from football_analytics.reid.model_registry import (
+        MODEL_ID_MARKET1501 as REG_MARKET,
+        MODEL_ID_SPORTSREID_SOCCERNET as REG_SPORTS,
+        ModelRegistryError,
+        get_reid_model_spec,
+    )
+
+    try:
+        spec = get_reid_model_spec(model_id, registry_path=registry_path)
+    except ModelRegistryError as exc:
+        raise EmbeddingError(str(exc)) from exc
+
+    mid = str(spec["model_id"])
+    root = sn_reid_root or DEFAULT_SN_REID_ROOT
+    commit = expected_sn_reid_commit or DEFAULT_SN_REID_COMMIT
+    ckpt = Path(
+        checkpoint_path_override
+        if checkpoint_path_override is not None
+        else spec["checkpoint_path"]
+    )
+    expected_sha = str(spec["sha256"]).strip().lower()
+
+    if mid == REG_SPORTS:
+        # Reject overrides that point at the full training checkpoint / wrong SHA.
+        from football_analytics.reid.safe_checkpoint import (
+            SafeCheckpointError,
+            load_sportsreid_osnet_cpu_model,
+            reject_non_sanitized_sportsreid_checkpoint,
+        )
+
+        try:
+            resolved = ckpt.expanduser().resolve()
+            reject_non_sanitized_sportsreid_checkpoint(resolved)
+            # Registry path is authoritative unless override matches same SHA contract.
+            if checkpoint_path_override is not None:
+                registry_ckpt = Path(str(spec["checkpoint_path"])).expanduser().resolve()
+                if resolved != registry_ckpt:
+                    # Allow override only if SHA still matches sanitized asset.
+                    pass
+            model, meta = load_sportsreid_osnet_cpu_model(
+                checkpoint_path=ckpt,
+                expected_sha256=expected_sha,
+                sn_reid_root=root,
+                expected_sn_reid_commit=commit,
+            )
+        except SafeCheckpointError as exc:
+            raise EmbeddingError(
+                "Requested ReID model could not be loaded; no fallback executed "
+                f"({exc})"
+            ) from exc
+        return {
+            "model": model,
+            "model_id": mid,
+            "architecture": MODEL_NAME,
+            "checkpoint_path": meta["checkpoint_path"],
+            "checkpoint_sha256": meta["checkpoint_sha256"],
+            "weights_only": True,
+            "allowlist_used": False,
+            "sn_reid_root": meta["sn_reid_root"],
+            "sn_reid_commit": meta["sn_reid_commit"],
+            "architecture_coverage": meta["architecture_coverage"],
+            "embedding_dimension": EMBEDDING_DIM,
+            "input_size": [RESIZE_HEIGHT, RESIZE_WIDTH],
+            "spec": spec,
+        }
+
+    if mid == REG_MARKET:
+        checkpoint_info = verify_checkpoint(ckpt, expected_sha256=expected_sha)
+        sn_info = verify_sn_reid_root(root, expected_commit=commit)
+        with temporary_sys_path_prepend(sn_info["root"]):
+            model = build_osnet_cpu_model(model_name=MODEL_NAME)
+            load_osnet_checkpoint_weights(model, checkpoint_info["path"])
+        return {
+            "model": model,
+            "model_id": mid,
+            "architecture": MODEL_NAME,
+            "checkpoint_path": str(checkpoint_info["path"]),
+            "checkpoint_sha256": checkpoint_info["sha256"],
+            "weights_only": False,
+            "allowlist_used": False,
+            "sn_reid_root": str(sn_info["root"]),
+            "sn_reid_commit": sn_info["commit"],
+            "architecture_coverage": None,
+            "embedding_dimension": EMBEDDING_DIM,
+            "input_size": [RESIZE_HEIGHT, RESIZE_WIDTH],
+            "spec": spec,
+        }
+
+    raise EmbeddingError(
+        "Requested ReID model could not be loaded; no fallback executed"
+    )
+
+
+def embed_image_paths_with_model(
+    model: Any,
+    image_paths: Sequence[str | Path],
+    *,
+    batch_size: int = DEFAULT_BATCH_SIZE,
+) -> np.ndarray:
+    """Preprocess absolute image paths and embed with an already-loaded OSNet model."""
+    if not image_paths:
+        raise EmbeddingError("image_paths must be non-empty")
+    tensors: list[torch.Tensor] = []
+    for raw in image_paths:
+        path = Path(raw).expanduser().resolve()
+        if not path.is_file():
+            raise EmbeddingError(f"image missing: {path}")
+        tensors.append(load_and_preprocess_crop(path))
+    return embed_tensors(model, tensors, batch_size=batch_size)
