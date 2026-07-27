@@ -41,6 +41,19 @@ from football_analytics.reid.hil_ui.dense_observations import (  # noqa: E402
     build_dense_observations_from_mapping,
     load_mapping_jsonl,
 )
+from football_analytics.reid.short_video import PACKAGE_MODE as SV_PACKAGE_MODE  # noqa: E402
+from football_analytics.reid.short_video import UI_PROFILE as SV_UI_PROFILE  # noqa: E402
+from football_analytics.reid.short_video.dense_timeline import (  # noqa: E402
+    load_dense_timeline,
+    observations_for_component,
+)
+from football_analytics.reid.short_video.provisional_timeline import (  # noqa: E402
+    append_provisional_from_confirm,
+    load_provisional,
+    mark_unresolved,
+    target_status_from_selection,
+    write_provisional,
+)
 from football_analytics.reid.hil_ui.gallery_quality import audit_gallery_candidates  # noqa: E402
 from football_analytics.reid.hil_ui.gallery_view import (  # noqa: E402
     validate_gallery_crop_for_display,
@@ -197,27 +210,44 @@ def run_app() -> None:
     if "selection" not in st.session_state:
         st.session_state.selection = {}
     session = st.session_state.session
-    package_mode = str((session.package.get("provenance") or {}).get("package_mode") or "")
-    is_product = package_mode == "product" or str(session.package.get("run_id", "")).startswith(
-        ("hil_c2_product", "mehil_run")
+    prov = session.package.get("provenance") or {}
+    package_mode = str(prov.get("package_mode") or "")
+    ui_profile = str(prov.get("ui_profile") or "")
+    is_short_video = (
+        ui_profile == SV_UI_PROFILE or package_mode == SV_PACKAGE_MODE
     )
+    is_product = is_short_video or package_mode == "product" or str(
+        session.package.get("run_id", "")
+    ).startswith(("hil_c2_product", "mehil_run", "sv_run"))
     if is_product:
         st.info(
             "PRODUCT package · decisions are NOT timeline-eligible until explicit "
-            "Timeline Approval on the Approvals tab."
+            "Timeline Approval."
         )
 
-    tab_live, tab_pkg, tab_queue, tab_review, tab_hist, tab_appr, tab_gal = st.tabs(
-        [
-            "Interactive Video",
-            "Session / Package",
-            "Recovery Queue",
-            "Frame Fallback / Debug",
-            "Decision History",
-            "Timeline Approvals",
-            "Match Gallery",
-        ]
-    )
+    if is_short_video:
+        tab_live, tab_queue, tab_timeline, tab_hist = st.tabs(
+            [
+                "Interactive Video",
+                "Recovery Queue",
+                "Target Timeline",
+                "Decision History",
+            ]
+        )
+        tab_pkg = tab_review = tab_appr = tab_gal = None
+    else:
+        tab_live, tab_pkg, tab_queue, tab_review, tab_hist, tab_appr, tab_gal = st.tabs(
+            [
+                "Interactive Video",
+                "Session / Package",
+                "Recovery Queue",
+                "Frame Fallback / Debug",
+                "Decision History",
+                "Timeline Approvals",
+                "Match Gallery",
+            ]
+        )
+        tab_timeline = None
 
     with tab_live:
         st.subheader("True interactive video tracking review")
@@ -249,44 +279,61 @@ def run_app() -> None:
         man = session.current_manifest()
         candidates = sort_candidates_for_display(man["candidates"]) if man else []
 
-        # Dense observations from external mapping (read-only)
-        mapping_path = None
-        for root in session.package.get("read_only_source_roots_resolved") or []:
-            cand = (
-                Path(root)
-                / "inventory"
-                / "target_001_external_track_candidate_mapping.jsonl"
-            )
-            if cand.is_file():
-                mapping_path = cand
-                break
         dens = {}
-        if mapping_path is not None:
-            codes = sorted(
-                {
-                    str((c.get("metadata") or {}).get("external_candidate_code") or "")
-                    for c in candidates
-                }
-                | {
-                    str(c["segment_id"]).replace("EXT_SEG_", "EXT_")
-                    for c in candidates
-                    if str(c.get("segment_id", "")).startswith("EXT_SEG_")
-                }
-            )
-            codes = [c if c.startswith("EXT_") else c for c in codes if c]
-            # normalize EXT_SEG_004 → EXT_004
-            norm_codes = []
-            for c in codes:
-                if c.startswith("EXT_SEG_"):
-                    norm_codes.append("EXT_" + c.replace("EXT_SEG_", ""))
-                elif c.startswith("EXT_"):
-                    norm_codes.append(c)
-            dens = build_dense_observations_from_mapping(
-                load_mapping_jsonl(mapping_path),
-                codes=sorted(set(norm_codes)),
-                segment_id_fn=_segment_id,
-            )
-            dens = attach_candidate_ids(dens, candidates)
+        video_fps = float(prov.get("fps") or 30.0)
+        video_w = int(prov.get("video_width") or 1332)
+        video_h = int(prov.get("video_height") or 746)
+
+        # Prefer short-video dense timeline (all players); never fall back to old EXT-only mapping.
+        dens_path = Path(session.package_path).parent / str(
+            prov.get("dense_bbox_timeline_path") or "dense_bbox_timeline.json"
+        )
+        component_cache = (
+            Path(session.package["writable_session_root_resolved"])
+            / "interactive_review"
+            / "dense_observations.json"
+        )
+        if dens_path.is_file():
+            dens = observations_for_component(load_dense_timeline(dens_path))
+        elif component_cache.is_file():
+            dens = json.loads(component_cache.read_text(encoding="utf-8"))
+        elif not is_short_video:
+            mapping_path = None
+            for root in session.package.get("read_only_source_roots_resolved") or []:
+                cand = (
+                    Path(root)
+                    / "inventory"
+                    / "target_001_external_track_candidate_mapping.jsonl"
+                )
+                if cand.is_file():
+                    mapping_path = cand
+                    break
+            if mapping_path is not None:
+                codes = sorted(
+                    {
+                        str((c.get("metadata") or {}).get("external_candidate_code") or "")
+                        for c in candidates
+                    }
+                    | {
+                        str(c["segment_id"]).replace("EXT_SEG_", "EXT_")
+                        for c in candidates
+                        if str(c.get("segment_id", "")).startswith("EXT_SEG_")
+                    }
+                )
+                norm_codes = []
+                for c in codes:
+                    if not c:
+                        continue
+                    if c.startswith("EXT_SEG_"):
+                        norm_codes.append("EXT_" + c.replace("EXT_SEG_", ""))
+                    elif c.startswith("EXT_"):
+                        norm_codes.append(c)
+                dens = build_dense_observations_from_mapping(
+                    load_mapping_jsonl(mapping_path),
+                    codes=sorted(set(norm_codes)),
+                    segment_id_fn=_segment_id,
+                )
+                dens = attach_candidate_ids(dens, candidates)
 
         markers = []
         for ev in session.events:
@@ -301,12 +348,28 @@ def run_app() -> None:
         sel = st.session_state.selection or {}
         track_end = None
         if sel.get("selected_segment_id") and dens:
-            # infer end from last frame containing that segment
             last = None
             for fi_s, rows in dens.items():
                 if any(r.get("segment_id") == sel.get("selected_segment_id") for r in rows):
                     last = int(fi_s)
             track_end = last
+
+        cur_frame = sel.get("selected_frame_index")
+        t_status = target_status_from_selection(
+            selected_raw_track_id=sel.get("selected_raw_track_id"),
+            track_end_frame=track_end,
+            current_frame=int(cur_frame) if cur_frame is not None else None,
+            has_unresolved=False,
+        )
+        if is_short_video:
+            st.markdown(
+                f"**Target status:** `{t_status}` · "
+                f"raw_track=`{sel.get('selected_raw_track_id')}` · "
+                f"segment=`{sel.get('selected_segment_id')}` · "
+                f"track_end=`{track_end}`"
+            )
+            if t_status in {"LOST", "UNRESOLVED"}:
+                st.error("TARGET TRACK ENDED — RECOVERY REQUIRED")
 
         proxy_info = None
         if session.package.get("source_video_available"):
@@ -332,9 +395,9 @@ def run_app() -> None:
                 selected_raw_track_id=sel.get("selected_raw_track_id"),
                 selected_segment_id=sel.get("selected_segment_id"),
                 track_end_frame=track_end,
-                fps=30.0,
-                video_width=1332,
-                video_height=746,
+                fps=video_fps,
+                video_width=video_w,
+                video_height=video_h,
                 key=f"interactive_{event['event_id']}",
             )
             if isinstance(click, dict) and click.get("type") == "bbox_click":
@@ -399,6 +462,39 @@ def run_app() -> None:
                         training_use_approved=False,
                         gallery_use_approved=False,
                     )
+                    if is_short_video and track_end is not None:
+                        prov_path = (
+                            Path(session.package["writable_session_root_resolved"])
+                            / "provisional_timeline.json"
+                        )
+                        provisional = load_provisional(prov_path)
+                        if not provisional:
+                            from football_analytics.reid.short_video.provisional_timeline import (
+                                empty_provisional,
+                            )
+
+                            provisional = empty_provisional(
+                                target_id=session.package["target_id"],
+                                video_id=str(prov.get("video_id") or ""),
+                            )
+                        start_f = int(
+                            st.session_state.selection.get("selected_frame_index") or 0
+                        )
+                        provisional = append_provisional_from_confirm(
+                            provisional,
+                            decision_id=result["decision"]["decision_id"],
+                            event_id=event["event_id"],
+                            segment_id=str(
+                                st.session_state.selection.get("selected_segment_id")
+                            ),
+                            raw_track_id=str(
+                                st.session_state.selection.get("selected_raw_track_id")
+                            ),
+                            start_frame=start_f,
+                            end_frame=int(track_end),
+                            fps=video_fps,
+                        )
+                        write_provisional(prov_path, provisional)
                     st.success(SUBMIT_SUCCESS_MESSAGE)
                     st.json(
                         {
@@ -408,11 +504,72 @@ def run_app() -> None:
                     )
                 except Exception as exc:  # noqa: BLE001
                     st.error(str(exc))
-            st.caption("Timeline Approval remains on the Timeline Approvals tab.")
+            if is_short_video:
+                st.caption(
+                    "Provisional timeline updates immediately. "
+                    "Approved timeline requires Timeline Approval (Advanced)."
+                )
+                with st.expander("Advanced · Timeline Approval / Package"):
+                    st.write(session.package_summary())
+                    st.caption("Use Decision History + recovery flow; full Approvals also below in non-SV packages.")
+            else:
+                st.caption("Timeline Approval remains on the Timeline Approvals tab.")
         else:
             st.warning("Source video unavailable for interactive review.")
 
-    with tab_pkg:
+    if is_short_video and tab_timeline is not None:
+        with tab_timeline:
+            st.subheader("Live Target Timeline")
+            session_root = Path(session.package["writable_session_root_resolved"])
+            prov_path = session_root / "provisional_timeline.json"
+            appr_path = session_root / "approved_timeline.json"
+            provisional = load_provisional(prov_path)
+            approved = (
+                json.loads(appr_path.read_text(encoding="utf-8"))
+                if appr_path.is_file()
+                else {"intervals": []}
+            )
+            c1, c2 = st.columns(2)
+            with c1:
+                st.markdown("### Provisional")
+                st.caption("Updates on CONFIRM; not analysis-eligible.")
+                st.json(provisional or {"intervals": []})
+            with c2:
+                st.markdown("### Approved")
+                st.caption("Only active decision + Timeline Approval.")
+                st.json(approved)
+            if st.button("Mark current track LOST → UNRESOLVED gap", key="sv_mark_lost"):
+                sel = st.session_state.selection or {}
+                if not sel.get("selected_raw_track_id"):
+                    st.error("no selection")
+                else:
+                    # infer track end
+                    dens_local = dens if dens else {}
+                    last = None
+                    for fi_s, rows in dens_local.items():
+                        if any(
+                            r.get("segment_id") == sel.get("selected_segment_id")
+                            for r in rows
+                        ):
+                            last = int(fi_s)
+                    if last is None:
+                        st.error("cannot infer track end")
+                    else:
+                        provisional = load_provisional(prov_path) or provisional
+                        provisional = mark_unresolved(
+                            provisional,
+                            start_frame=last + 1,
+                            end_frame=None,
+                            fps=float(prov.get("fps") or 30.0),
+                            previous_segment_id=sel.get("selected_segment_id"),
+                            previous_raw_track_id=sel.get("selected_raw_track_id"),
+                        )
+                        write_provisional(prov_path, provisional)
+                        st.warning("TARGET TRACK ENDED — RECOVERY REQUIRED (UNRESOLVED)")
+                        st.rerun()
+
+    if tab_pkg is not None:
+      with tab_pkg:
         summary = session.package_summary()
         st.write(
             {
@@ -452,7 +609,8 @@ def run_app() -> None:
                         break
                 st.rerun()
 
-    with tab_review:
+    if tab_review is not None:
+      with tab_review:
         event = session.current_event
         st.info(TRACKING_NOT_RUN_NOTICE)
         st.info(
@@ -858,7 +1016,8 @@ def run_app() -> None:
         with st.expander("Advanced technical details"):
             st.json(hist)
 
-    with tab_appr:
+    if tab_appr is not None:
+      with tab_appr:
         st.subheader("Product timeline approval")
         if not is_product:
             st.warning(
@@ -952,7 +1111,8 @@ def run_app() -> None:
                 st.write("Approval log (append-only)")
                 st.json(ApprovalLog(approval_path).read_raw())
 
-    with tab_gal:
+    if tab_gal is not None:
+      with tab_gal:
         st.subheader("Match-specific gallery crop approvals")
         st.info(
             "These are multiple views of the same enrolled target tracklet. Approve "

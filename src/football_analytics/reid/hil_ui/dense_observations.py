@@ -10,18 +10,26 @@ from typing import Any, Mapping, Sequence
 def build_dense_observations_from_mapping(
     mapping_rows: Sequence[Mapping[str, Any]],
     *,
-    codes: Sequence[str],
+    codes: Sequence[str] | None,
     segment_id_fn,
 ) -> dict[str, list[dict[str, Any]]]:
-    """Return frame_index(str) → list of bbox observation dicts."""
+    """Return frame_index(str) → list of bbox observation dicts.
+
+    If ``codes`` is None, include every mapping row (all-player dense timeline).
+    """
     by_code = {str(r["external_candidate_code"]): r for r in mapping_rows}
+    selected = (
+        list(codes)
+        if codes is not None
+        else [str(r["external_candidate_code"]) for r in mapping_rows]
+    )
     out: dict[str, list[dict[str, Any]]] = {}
-    for code in codes:
+    for code in selected:
         row = by_code.get(code)
         if row is None:
             continue
         seg = segment_id_fn(code)
-        raw = str(row["raw_external_track_id"])
+        raw = str(row.get("raw_external_track_id", row.get("raw_track_id")))
         for item in row.get("bbox_per_observation") or []:
             fi = int(item["frame_index"])
             key = str(fi)
@@ -29,7 +37,7 @@ def build_dense_observations_from_mapping(
                 {
                     "bbox_xyxy": [float(v) for v in item["bbox_xyxy"]],
                     "segment_id": seg,
-                    "raw_track_id": raw,
+                    "raw_track_id": str(raw),
                     "external_candidate_code": code,
                     "candidate_id": None,
                 }
