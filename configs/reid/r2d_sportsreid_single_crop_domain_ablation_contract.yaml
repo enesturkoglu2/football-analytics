@@ -1,0 +1,37 @@
+gate: REID_R2D_SOCCERNET_OSNET_SINGLE_CROP_DOMAIN_ABLATION
+experiment_a:
+  model_id: osnet_x1_0_market1501
+  frozen_not_rescored: true
+  source_summary: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_frozen_target_distractor_scoring_evaluation/stage5d_f3m_summary.json
+experiment_c:
+  model_id: osnet_x1_0_sportsreid_soccernet
+  representation: single_representative_crop
+  scoring: S = T_max - D_max
+universe:
+  complete: 243
+  scoreable: 115
+  positive: 10
+  same_team_negative: 55
+  other_team_negative: 50
+galleries:
+  target_v2_members: 13
+  distractor_v1_members: 23
+forbidden:
+  multi_frame: true
+  r2b_import: true
+  full_sportsreid_checkpoint: true
+  weights_only_false: true
+  network: true
+  threshold: true
+  automatic_identity_assignment: true
+outcome_rules:
+  STRONG:
+    AP_delta_min: 0.20
+    AUROC_delta_min: 0.15
+    same_team_AUROC_delta_min: 0.10
+    Recall@10_min: 0.60
+    Recall@5_min: 0.30
+candidate_review:
+  promising_recall@5_min: 0.70
+  limited_recall@10_min: 0.70
+holdout_role: development_and_error_analysis_only
