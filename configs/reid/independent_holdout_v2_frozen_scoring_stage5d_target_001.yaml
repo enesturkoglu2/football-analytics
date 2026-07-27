@@ -1,0 +1,152 @@
+# Stage 5D-F3M — Target 001 independent holdout v2 OSNet query embedding
+# and frozen target–distractor scoring evaluation.
+# Label-blind scoring; GT join only after pre-GT seal.
+# No threshold, identity assignment, gallery mutation, or holdout enrollment.
+schema_version: reid_independent_holdout_v2_frozen_scoring_config_v1
+stage: 5D-F3M
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f3m_frozen_scoring_evaluation_only
+
+project_head_expected: 3057d56d6f6d7510fa01b05af811ae3229e80aa0
+project_head_message_expected: Freeze target 001 holdout v2 ground truth
+
+holdout_source:
+  path: data/test_clips/target_001_independent_holdout_v2.mp4
+  expected_sha256: bbfe3669cfbf39534f71a80131401bb4d9f931c7a4ea485404ab2fa207a6231f
+  decode_forbidden: true
+
+sample_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  decode_forbidden: true
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+  decode_forbidden: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+  model_name: osnet_x1_0
+  embedding_dimension: 512
+  checkpoint_family: market1501_softmax_256x128
+
+canonical_reid_runtime:
+  sn_reid_root: /home/enesturkoglu2/projects/soccernet/sn-reid
+  expected_sn_reid_commit: 621e2b0f2d2a7a3e207b8dd747542b6608bf72db
+  conda_env: sn-reid-cpu
+  batch_size: 8
+  device: cpu
+  eval_mode: true
+  gradients_disabled: true
+  embedding_determinism_atol: 1.0e-5
+  unit_norm_atol: 1.0e-4
+
+stage5d_f3l_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_ground_truth_manual_freeze
+  expected_final_status: COMPLETED_STAGE5D_F3L_TARGET_001_NEW_INDEPENDENT_HOLDOUT_GROUND_TRUTH_FROZEN
+  expected_readiness: TARGET_001_INDEPENDENT_HOLDOUT_V2_READY_FOR_FROZEN_QUERY_EMBEDDING_AND_SCORING
+  expected_complete_universe: 243
+  expected_reviewed_eligible: 141
+  expected_unreviewed_ineligible: 102
+  expected_target_occurrence_yes: 10
+  expected_target_occurrence_no: 105
+  expected_same_team_target_no: 55
+  expected_other_team_target_no: 50
+  expected_non_player: 5
+  expected_invalid: 7
+  expected_multi_person_ambiguous: 14
+  expected_uncertain: 0
+  expected_clean_positive_gt: 10
+  expected_clean_negative_gt: 110
+  expected_clean_same_team_negative_gt: 55
+  expected_reviewed_metric_exclusions: 21
+  expected_component_policy: ONE_FROZEN_SEGMENT_PER_COMPONENT_NO_CROSS_TRACK_LINK_EVIDENCE
+  expected_component_conflict_count: 0
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3L_TARGET_001_HOLDOUT_V2_GT_FREEZE_3057d56.tar.gz
+  expected_snapshot_sha256: 6e6dfed290509182cb3838320afd7b69a175bb2e497c26ef215d3e19eadb45bf
+
+stage5d_f3h_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_target_distractor_scoring_contract_and_holdout_design
+  expected_final_status: COMPLETED_STAGE5D_F3H_TARGET_001_TARGET_DISTRACTOR_SCORING_AND_HOLDOUT_DESIGN_READY
+  primary_formula_id: TARGET_DISTRACTOR_MAX_MARGIN
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3H_TARGET_001_SCORING_DESIGN_13d33d7.tar.gz
+  expected_snapshot_sha256: 09b7844fbd8e298956820456a7f0a1b82742d64f8669a02d68ec86d9aad7e6a3
+
+stage5d_f3g_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v2_and_distractor_gallery_v1
+  expected_final_status: COMPLETED_STAGE5D_F3G_TARGET_001_GALLERY_V2_AND_DISTRACTOR_GALLERY_BUILT
+  expected_readiness: TARGET_001_GALLERY_V2_AND_DISTRACTOR_GALLERY_READY_FOR_SCORING_DESIGN
+  expected_target_members: 13
+  expected_distractor_members: 23
+  expected_target_embedding_sha256: b93e192011ab823264715dbcf485d92246351a209ccf5b913126a12289e86a53
+  expected_distractor_embedding_sha256: c0270eb6858473b2d5f97a1ebc6c9e88e284574b363200755252127aaaacd4b6
+  expected_target_centroid_sha256: 800c00f73f3aa85f38192e2e6568190ad383fb5f04fafb532ad0ac98c964a205
+  expected_target_medoid_sha256: e342fa9968be422bb078462e316cc03b105f29dfe603686d1e79c70f6df85595
+  expected_distractor_centroid_sha256: 01446f04dfd24e2a51347308a55d8880a968d830fd8dbb3e2209011d4ad694a8
+  expected_distractor_medoid_sha256: 6b7c72388f1263eedbb063098e78585ed477291d2cf546fa7a37ed478db6ebe7
+  expected_target_medoid_id: target_001_ext_anchor_004
+  expected_distractor_medoid_id: target_001_ext_hard_negative_candidate_025
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3G_TARGET_001_GALLERY_V2_0e467c1.tar.gz
+  expected_snapshot_sha256: dafb77147ce0c7a72b9eed43ba4b9223f1150709da667f655116b8249644f28c
+
+stage5d_f3k_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_ground_truth_review_package
+  expected_final_status: COMPLETED_STAGE5D_F3K_TARGET_001_NEW_INDEPENDENT_HOLDOUT_GROUND_TRUTH_REVIEW_PACKAGE_READY
+  expected_representative_crop_count: 141
+  expected_crop_manifest_rows: 141
+  expected_holdout_sha256: bbfe3669cfbf39534f71a80131401bb4d9f931c7a4ea485404ab2fa207a6231f
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3K_TARGET_001_HOLDOUT_V2_GT_REVIEW_d2c9383.tar.gz
+  expected_snapshot_sha256: 63af341120a9e2d6003cce89c9b14fecb68ca300f2d5fc3fa18debc2f02cfa2b
+
+query_universe:
+  scoreable: 115
+  positive: 10
+  negative_player: 105
+  same_team_negative: 55
+  other_team_negative: 50
+  non_player_excluded: 5
+  invalid_excluded: 7
+  multi_person_ambiguous_excluded: 14
+  review_ineligible_excluded: 102
+  total_scoring_exclusions: 128
+  complete_holdout_universe: 243
+  exact_positive_ids:
+    - H2_GT_REVIEW_000010
+    - H2_GT_REVIEW_000030
+    - H2_GT_REVIEW_000061
+    - H2_GT_REVIEW_000090
+    - H2_GT_REVIEW_000094
+    - H2_GT_REVIEW_000104
+    - H2_GT_REVIEW_000124
+    - H2_GT_REVIEW_000129
+    - H2_GT_REVIEW_000135
+    - H2_GT_REVIEW_000136
+
+primary_formula:
+  name: TARGET_DISTRACTOR_MAX_MARGIN
+  target_aggregation: max
+  distractor_aggregation: max
+  target_top_k: 1
+  distractor_top_k: 1
+
+forbidden:
+  threshold_selection: true
+  identity_assignment: true
+  gallery_mutation: true
+  holdout_enrollment: true
+  hard_negative_mining: true
+  fine_tuning: true
+  formula_mutation_after_results: true
+  crop_regeneration: true
+  holdout_mp4_decode: true
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_frozen_target_distractor_scoring_evaluation
