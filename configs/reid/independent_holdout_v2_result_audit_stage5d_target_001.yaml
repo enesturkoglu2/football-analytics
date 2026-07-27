@@ -1,0 +1,141 @@
+# Stage 5D-F3N — Target 001 independent holdout v2 frozen-result audit
+# and visual error-analysis package. Read-only F3M scores/ranks/metrics.
+# No rescoring, embedding, gallery mutation, threshold, identity, or deletion.
+schema_version: reid_independent_holdout_v2_result_audit_config_v1
+stage: 5D-F3N
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f3n_result_audit_and_error_analysis_only
+
+project_head_expected: edd31c6aad1c7b697d9faee44e57fd074fbaa6d2
+project_head_message_expected: Evaluate target 001 holdout v2 with frozen scoring
+
+holdout_source:
+  path: data/test_clips/target_001_independent_holdout_v2.mp4
+  expected_sha256: bbfe3669cfbf39534f71a80131401bb4d9f931c7a4ea485404ab2fa207a6231f
+  decode_allowed_for_diagnostic_render_only: true
+
+sample_source:
+  path: data/test_clips/sample.mp4
+  expected_sha256: f4b28dd58a6cf242344a4198b8c0ba9062b20977cec3ae12d96322750bfd7b9b
+  decode_forbidden: true
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  expected_sha256: ab1c622cd0243f99a0ee9ae6317d8e11132216d9cd34970eb59448593073e877
+  decode_forbidden: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  expected_sha256: 0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  expected_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+  load_forbidden: true
+  new_embedding_forbidden: true
+
+stage5d_f3m_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_frozen_target_distractor_scoring_evaluation
+  expected_final_status: COMPLETED_STAGE5D_F3M_TARGET_001_NEW_INDEPENDENT_HOLDOUT_FROZEN_SCORING_EVALUATED
+  expected_readiness: TARGET_001_INDEPENDENT_HOLDOUT_V2_FROZEN_RESULT_READY_FOR_AUDIT
+  expected_recorded_outcome: MANUAL_RULE_INTERPRETATION_REQUIRED
+  expected_positive_ranks: [6, 9, 27, 31, 46, 53, 65, 70, 83, 100]
+  expected_metrics:
+    Recall@1: 0.0
+    Recall@3: 0.0
+    Recall@5: 0.0
+    Recall@10: 0.2
+    MRR: 0.16666666666666666
+    AP: 0.12813472143260216
+    AUROC: 0.5857142857142857
+    AUPRC: 0.12813472143260216
+    segment_margin: -0.06554722785949707
+    component_margin: -0.06554722785949707
+    same_team_AUROC: 0.7090909090909091
+    same_team_AP: 0.27910727555384335
+    positive_median_minus_negative_median: 0.0031642913818359375
+    positive_median_minus_same_team_negative_median: 0.007509112358093262
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3M_TARGET_001_HOLDOUT_V2_FROZEN_SCORING_edd31c6.tar.gz
+  expected_snapshot_sha256: d13c6e5de1ff254e487ba7737a03521019cf704b3028766e6a55103a76a00cb7
+
+stage5d_f3l_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_ground_truth_manual_freeze
+  expected_final_status: COMPLETED_STAGE5D_F3L_TARGET_001_NEW_INDEPENDENT_HOLDOUT_GROUND_TRUTH_FROZEN
+  expected_component_policy: ONE_FROZEN_SEGMENT_PER_COMPONENT_NO_CROSS_TRACK_LINK_EVIDENCE
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3L_TARGET_001_HOLDOUT_V2_GT_FREEZE_3057d56.tar.gz
+  expected_snapshot_sha256: 6e6dfed290509182cb3838320afd7b69a175bb2e497c26ef215d3e19eadb45bf
+
+stage5d_f3k_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_ground_truth_review_package
+  expected_representative_crop_count: 141
+  expected_crop_manifest_rows: 141
+  expected_diagnostic_video_count: 3
+  expected_holdout_sha256: bbfe3669cfbf39534f71a80131401bb4d9f931c7a4ea485404ab2fa207a6231f
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3K_TARGET_001_HOLDOUT_V2_GT_REVIEW_d2c9383.tar.gz
+  expected_snapshot_sha256: 63af341120a9e2d6003cce89c9b14fecb68ca300f2d5fc3fa18debc2f02cfa2b
+
+stage5d_f3g_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_gallery_v2_and_distractor_gallery_v1
+  expected_target_members: 13
+  expected_distractor_members: 23
+  expected_target_embedding_sha256: b93e192011ab823264715dbcf485d92246351a209ccf5b913126a12289e86a53
+  expected_distractor_embedding_sha256: c0270eb6858473b2d5f97a1ebc6c9e88e284574b363200755252127aaaacd4b6
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3G_TARGET_001_GALLERY_V2_0e467c1.tar.gz
+  expected_snapshot_sha256: dafb77147ce0c7a72b9eed43ba4b9223f1150709da667f655116b8249644f28c
+
+gallery_crop_package_roots:
+  - outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_anchor_review_package
+  - outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_review_package
+  - outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_external_refinement_crop_review_package
+
+stage5d_f3j_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_label_blind_universe
+  observations_rel: segmentation/target_001_holdout_v2_label_blind_segment_observations.jsonl
+  segment_inventory_rel: segmentation/target_001_holdout_v2_label_blind_segment_inventory.jsonl
+
+exact_positive_ids:
+  - H2_GT_REVIEW_000010
+  - H2_GT_REVIEW_000030
+  - H2_GT_REVIEW_000061
+  - H2_GT_REVIEW_000090
+  - H2_GT_REVIEW_000094
+  - H2_GT_REVIEW_000104
+  - H2_GT_REVIEW_000124
+  - H2_GT_REVIEW_000129
+  - H2_GT_REVIEW_000135
+  - H2_GT_REVIEW_000136
+
+contact_sheets:
+  min_width_px: 3600
+  grid_cols: 2
+  items_per_sheet: 10
+
+diagnostic_videos:
+  fps: 30
+  title_card_sec: 0.5
+  pre_pad_sec: 0.5
+  post_pad_sec: 0.5
+  max_clip_sec: 4.0
+  min_clip_sec: 1.0
+  crf: 18
+  preset: veryfast
+  watermark: "POST-EVALUATION ERROR AUDIT — FROZEN SCORES — NO MODEL UPDATE"
+  panel_watermark: "FROZEN INDEPENDENT RESULT AUDIT — NO RESCORING — NO GALLERY CHANGE"
+
+forbidden:
+  score_recompute: true
+  embedding_generation: true
+  gallery_mutation: true
+  threshold_selection: true
+  identity_assignment: true
+  holdout_enrollment: true
+  hard_negative_mining: true
+  automatic_root_cause: true
+  automatic_outcome_class: true
+  upstream_deletion: true
+  cleanup: true
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_result_audit_and_error_analysis_package
