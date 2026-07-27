@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Any
@@ -42,6 +43,11 @@ from football_analytics.reid.hil.timeline.approvals import (  # noqa: E402
     ApprovalLog,
     assert_decision_approvable,
     build_approval_record,
+)
+from football_analytics.reid.multi_event_hil.gallery_approvals import (  # noqa: E402
+    GalleryApprovalLog,
+    build_gallery_approval,
+    resolve_active_gallery_approvals,
 )
 from football_analytics.reid.hil_ui.session import open_review_session  # noqa: E402
 from football_analytics.reid.hil_ui.visualization import (  # noqa: E402
@@ -180,13 +186,14 @@ def run_app() -> None:
             "Timeline Approval on the Approvals tab."
         )
 
-    tab_pkg, tab_queue, tab_review, tab_hist, tab_appr = st.tabs(
+    tab_pkg, tab_queue, tab_review, tab_hist, tab_appr, tab_gal = st.tabs(
         [
             "Session / Package",
             "Recovery Queue",
             "Recovery Review",
             "Decision History",
             "Timeline Approvals",
+            "Match Gallery",
         ]
     )
 
@@ -664,6 +671,86 @@ def run_app() -> None:
                             st.error(str(exc))
                 st.write("Approval log (append-only)")
                 st.json(ApprovalLog(approval_path).read_raw())
+
+    with tab_gal:
+        st.subheader("Match-specific gallery crop approvals")
+        st.caption(
+            "Development/old target gallery is forbidden. Approving a crop does not "
+            "auto-expand training use. Timeline eligibility still requires Timeline Approvals."
+        )
+        gal_log_path = (session.package.get("provenance") or {}).get(
+            "gallery_approval_log_path"
+        )
+        crop_man_path = session.package_path.parent / "gallery_crop_candidates" / "enrollment_crop_candidates.json"
+        if not is_product:
+            st.warning("Gallery approvals enabled only for product-mode packages.")
+        elif not gal_log_path:
+            st.info("No gallery_approval_log_path in package provenance.")
+        elif not crop_man_path.is_file():
+            st.info(
+                f"Crop candidates not found yet: {crop_man_path}. "
+                "Run multi-event package builder first."
+            )
+        else:
+            crop_man = json.loads(crop_man_path.read_text(encoding="utf-8"))
+            active = resolve_active_gallery_approvals(
+                GalleryApprovalLog(gal_log_path).read_raw()
+            )
+            st.write(
+                {
+                    "candidate_count": crop_man.get("candidate_count"),
+                    "active_approvals": len(active),
+                    "automatic_gallery_expansion": False,
+                }
+            )
+            match_id = (session.package.get("provenance") or {}).get("match_id") or "unknown"
+            analysis_run_id = session.package.get("run_id")
+            for crop in crop_man.get("candidates") or []:
+                cols = st.columns([2, 3, 1])
+                with cols[0]:
+                    try:
+                        from PIL import Image
+
+                        cols[0].image(
+                            Image.open(crop["crop_path"]),
+                            caption=crop["crop_id"],
+                            use_container_width=True,
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        cols[0].write(str(exc))
+                cols[1].write(
+                    {
+                        "crop_id": crop["crop_id"],
+                        "frame": crop["frame_index"],
+                        "view_hint": crop.get("view_hint"),
+                        "segment_id": crop["segment_id"],
+                        "raw_track_id": crop["raw_track_id"],
+                        "approved": crop["crop_id"] in active,
+                    }
+                )
+                if cols[2].button(
+                    "Approve gallery member",
+                    key=f"gal_{crop['crop_id']}",
+                    disabled=crop["crop_id"] in active,
+                ):
+                    try:
+                        record = build_gallery_approval(
+                            approval_id=f"gal_{crop['crop_id']}_{len(GalleryApprovalLog(gal_log_path).read_raw())+1:04d}",
+                            crop=crop,
+                            match_id=str(match_id),
+                            analysis_run_id=str(analysis_run_id),
+                            target_id=session.package["target_id"],
+                            product_package_id=session.package["package_id"],
+                            reviewer=st.session_state.get("gal_reviewer", "hil_gallery_reviewer"),
+                        )
+                        GalleryApprovalLog(gal_log_path).append(record)
+                        st.success(f"Gallery approval appended for {crop['crop_id']}")
+                        st.rerun()
+                    except Exception as exc:  # noqa: BLE001
+                        st.error(str(exc))
+            st.text_input("Gallery reviewer", key="gal_reviewer", value="hil_gallery_reviewer")
+            st.write("Gallery approval log")
+            st.json(GalleryApprovalLog(gal_log_path).read_raw())
 
 
 def main() -> None:

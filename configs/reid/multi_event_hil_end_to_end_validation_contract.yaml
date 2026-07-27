@@ -1,0 +1,15 @@
+gate: REID_PRODUCT_VIDEO_MULTI_EVENT_END_TO_END_HIL_VALIDATION
+target_id: target_001
+match_id: match_external_enrollment_v1_mehil
+package_id: pkg_mehil_external_enrollment_v1
+forbid_development_gallery: true
+forbid_holdout_gt_prefill: true
+forbid_automatic_identity: true
+forbid_clip: true
+forbid_game_state: true
+forbid_heatmap_distance_speed: true
+sportsreid_role: appearance_helper_ranker_only
+output_root: outputs/reid/target_001_multi_event_hil_end_to_end_validation
+package_root: outputs/reid/target_001_multi_event_hil_review_package
+success_next_gate: REID_HIL_D_VERIFIED_TARGET_TRAJECTORY_AND_METRIC_EXPORT
+research_next_gate: REID_CLIP_A_CONTROLLED_ASSET_ACQUISITION_AND_SECURITY_REVIEW
