@@ -1,0 +1,25 @@
+gate: REID_HIL_B_OFFLINE_REVIEW_UI_ENVIRONMENT_AND_IMPLEMENTATION
+status_on_success: COMPLETED_HIL_B_OFFLINE_REVIEW_UI
+product_next_gate: REID_HIL_C_TARGET_TIMELINE_RECONSTRUCTION
+research_next_gate: REID_CLIP_A_CONTROLLED_ASSET_ACQUISITION_AND_SECURITY_REVIEW
+ui_technology: STREAMLIT_OFFLINE_REVIEW_MVP
+isolated_environment: football-hil-ui
+bind_address: 127.0.0.1
+public_share: false
+public_tunnel: false
+telemetry: false
+gatherUsageStats: false
+automatic_identity_assignment: false
+automatic_gallery_expansion: false
+training_use_approved_default: false
+gallery_use_approved_default: false
+direct_bbox_selection_required: true
+topk_hiding_forbidden: true
+review_package_schema: target_recovery_review_package_v1
+hil_a_schemas:
+  - target_recovery_event_v1
+  - target_recovery_candidate_manifest_v1
+  - target_recovery_decision_v1
+no_reid_inference: true
+no_clip_download: true
+no_timeline_final: true

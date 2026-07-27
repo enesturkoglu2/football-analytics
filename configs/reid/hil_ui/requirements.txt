@@ -1,0 +1,9 @@
+# Isolated HIL offline review UI environment (football-hil-ui)
+# Do not install into football-cv / sn-reid-cpu.
+python=3.10
+streamlit==1.37.1
+plotly==5.24.1
+pillow==10.4.0
+opencv-python-headless==4.10.0.84
+PyYAML==6.0.2
+numpy==1.26.4
