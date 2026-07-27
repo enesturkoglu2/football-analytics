@@ -175,9 +175,15 @@ def reconstruct_timeline(
     allow_tracker_continuation: bool = False,
     timeline_id: str | None = None,
     generated_at: str | None = None,
+    approved_decision_ids: set[str] | None = None,
+    require_timeline_approval: bool = False,
 ) -> dict[str, Any]:
     """Reconstruct timeline. Does not mutate decision logs."""
-    source_audit = audit_decision_sources(decision_sources)
+    source_audit = audit_decision_sources(
+        decision_sources,
+        approved_decision_ids=approved_decision_ids,
+        require_timeline_approval=require_timeline_approval,
+    )
     eligible = list(source_audit["timeline_eligible_decisions"])
     intervals: list[dict[str, Any]] = []
     excluded_intervals: list[dict[str, Any]] = []

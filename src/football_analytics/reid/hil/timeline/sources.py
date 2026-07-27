@@ -39,8 +39,15 @@ def classify_decision(
     log_sha256: str,
     review_package_mode: str | None = None,
     effective_decision_ids: set[str] | None = None,
+    approved_decision_ids: set[str] | None = None,
+    require_timeline_approval: bool = False,
 ) -> dict[str, Any]:
-    """Classify one decision for timeline eligibility (never mutates the log)."""
+    """Classify one decision for timeline eligibility (never mutates the log).
+
+    When ``require_timeline_approval`` is True (HIL-C2), CONFIRM rows are
+    timeline-eligible only if their decision_id is in ``approved_decision_ids``.
+    Legacy HIL-C tests leave both unset and keep prior product-mode behavior.
+    """
     decision_id = str(decision.get("decision_id"))
     action = str(decision.get("action"))
     run_id = str(decision.get("run_id") or "")
@@ -96,10 +103,20 @@ def classify_decision(
         effective_decision_ids is None or decision_id in (effective_decision_ids or set())
     )
 
+    has_active_approval = True
+    if require_timeline_approval:
+        has_active_approval = bool(
+            approved_decision_ids is not None and decision_id in approved_decision_ids
+        )
+        if eligible and action == DecisionAction.CONFIRM_TARGET.value and not has_active_approval:
+            eligible = False
+            exclusion = "missing_product_timeline_approval"
+
     confirm_eligible = bool(
         eligible
         and is_effective
         and action == DecisionAction.CONFIRM_TARGET.value
+        and has_active_approval
     )
 
     # Provenance invalid if missing required ids for confirm
@@ -134,9 +151,11 @@ def classify_decision(
         "timeline_eligible": confirm_eligible,
         "exclusion_reason": exclusion,
         "approval_provenance": {
-            "explicit_product_timeline_approval": classification
-            == DecisionSourceClass.PRODUCT_APPROVED
-            and confirm_eligible,
+            "explicit_product_timeline_approval": bool(
+                confirm_eligible and require_timeline_approval and has_active_approval
+            ),
+            "require_timeline_approval": require_timeline_approval,
+            "active_approval_present": has_active_approval if require_timeline_approval else None,
             "assumed_approval": False,
         },
         "selected_segment_id": decision.get("selected_segment_id"),
@@ -152,6 +171,8 @@ def audit_decision_log(
     path: str | Path,
     *,
     review_package_mode: str | None = None,
+    approved_decision_ids: set[str] | None = None,
+    require_timeline_approval: bool = False,
 ) -> dict[str, Any]:
     log_path = Path(path).expanduser().resolve()
     log = DecisionLog(log_path)
@@ -166,6 +187,8 @@ def audit_decision_log(
             log_sha256=sha,
             review_package_mode=review_package_mode,
             effective_decision_ids=effective_ids,
+            approved_decision_ids=approved_decision_ids,
+            require_timeline_approval=require_timeline_approval,
         )
         for row in rows
     ]
@@ -198,13 +221,21 @@ def audit_decision_log(
 
 def audit_decision_sources(
     sources: Sequence[Mapping[str, Any]],
+    *,
+    approved_decision_ids: set[str] | None = None,
+    require_timeline_approval: bool = False,
 ) -> dict[str, Any]:
     """Audit multiple logs. Each source: {path, review_package_mode?}."""
     manifests = []
     all_decisions: list[dict[str, Any]] = []
     for src in sources:
         man = audit_decision_log(
-            src["path"], review_package_mode=src.get("review_package_mode")
+            src["path"],
+            review_package_mode=src.get("review_package_mode"),
+            approved_decision_ids=approved_decision_ids,
+            require_timeline_approval=bool(
+                src.get("require_timeline_approval", require_timeline_approval)
+            ),
         )
         manifests.append(man)
         all_decisions.extend(man["decisions"])
@@ -216,6 +247,8 @@ def audit_decision_sources(
         "decisions": all_decisions,
         "timeline_eligible_decisions": eligible,
         "counts": counts,
+        "require_timeline_approval": require_timeline_approval,
+        "approved_decision_ids": sorted(approved_decision_ids or []),
         "product_approved_confirm_count": sum(
             1
             for d in all_decisions

@@ -36,6 +36,13 @@ from football_analytics.reid.hil_ui.geometry import (  # noqa: E402
 )
 from football_analytics.reid.hil_ui.media import decode_frame_to_cache  # noqa: E402
 from football_analytics.reid.hil_ui.observations import load_observation_lookup  # noqa: E402
+from football_analytics.reid.hil.common import sha256_file  # noqa: E402
+from football_analytics.reid.hil.resolve import resolve_effective_decisions  # noqa: E402
+from football_analytics.reid.hil.timeline.approvals import (  # noqa: E402
+    ApprovalLog,
+    assert_decision_approvable,
+    build_approval_record,
+)
 from football_analytics.reid.hil_ui.session import open_review_session  # noqa: E402
 from football_analytics.reid.hil_ui.visualization import (  # noqa: E402
     SPARSE_PACKAGE_NOTICE,
@@ -163,9 +170,24 @@ def run_app() -> None:
     if "selection" not in st.session_state:
         st.session_state.selection = {}
     session = st.session_state.session
+    package_mode = str((session.package.get("provenance") or {}).get("package_mode") or "")
+    is_product = package_mode == "product" or str(session.package.get("run_id", "")).startswith(
+        "hil_c2_product"
+    )
+    if is_product:
+        st.info(
+            "PRODUCT package · decisions are NOT timeline-eligible until explicit "
+            "Timeline Approval on the Approvals tab."
+        )
 
-    tab_pkg, tab_queue, tab_review, tab_hist = st.tabs(
-        ["Session / Package", "Recovery Queue", "Recovery Review", "Decision History"]
+    tab_pkg, tab_queue, tab_review, tab_hist, tab_appr = st.tabs(
+        [
+            "Session / Package",
+            "Recovery Queue",
+            "Recovery Review",
+            "Decision History",
+            "Timeline Approvals",
+        ]
     )
 
     with tab_pkg:
@@ -548,6 +570,100 @@ def run_app() -> None:
         )
         with st.expander("Advanced technical details"):
             st.json(hist)
+
+    with tab_appr:
+        st.subheader("Product timeline approval")
+        if not is_product:
+            st.warning(
+                "This package is not product-mode. Timeline approvals are disabled "
+                "(fixture/acceptance/dev packages cannot mint product eligibility)."
+            )
+        else:
+            approval_path = (session.package.get("provenance") or {}).get("approval_log_path")
+            if not approval_path:
+                st.error("approval_log_path missing from package provenance")
+            else:
+                st.caption(
+                    "A CONFIRM_TARGET decision alone does not enter the product timeline. "
+                    "Approve only after reviewing the summary below. Gaps stay unresolved."
+                )
+                decisions = session.decision_log.read_raw()
+                by_id = {d["decision_id"]: d for d in decisions}
+                effective = resolve_effective_decisions(decisions)
+                confirm_tips = []
+                for tip in effective.values():
+                    if tip.get("action") != "CONFIRM_TARGET":
+                        continue
+                    row = by_id.get(tip["effective_decision_id"])
+                    if row is not None:
+                        confirm_tips.append(row)
+                if not confirm_tips:
+                    st.info("No effective CONFIRM_TARGET decisions yet.")
+                else:
+                    options = {
+                        f"{d['decision_id']} · {d.get('selected_segment_id')} · "
+                        f"frame {d.get('selected_frame_index')}": d
+                        for d in confirm_tips
+                    }
+                    chosen_label = st.selectbox("Decision to approve", list(options.keys()))
+                    chosen_dec = options[chosen_label]
+                    st.write(
+                        {
+                            "decision_id": chosen_dec["decision_id"],
+                            "target_id": chosen_dec.get("target_id"),
+                            "segment_id": chosen_dec.get("selected_segment_id"),
+                            "raw_track_id": chosen_dec.get("selected_raw_track_id"),
+                            "video_id": chosen_dec.get("video_id"),
+                            "frame": chosen_dec.get("selected_frame_index"),
+                            "enters_product_timeline": True,
+                            "usable_for_heatmap_distance": True,
+                            "unresolved_gaps_auto_filled": False,
+                        }
+                    )
+                    ack = st.checkbox(
+                        "I explicitly approve this decision for product_target_timeline",
+                        value=False,
+                    )
+                    appr_comment = st.text_input("Approval comment", value="")
+                    if st.button("Append timeline approval", disabled=not ack):
+                        try:
+                            log_path = session.package["decision_log_resolved"]
+                            log_sha = sha256_file(Path(log_path))
+                            assert_decision_approvable(
+                                chosen_dec,
+                                log_path=log_path,
+                                log_sha256=log_sha,
+                                review_package_mode="product",
+                                product_package_id=session.package["package_id"],
+                                expected_target_id=session.package["target_id"],
+                                expected_video_sha256=session.package["source_video_sha256"],
+                            )
+                            approval_id = f"appr_{chosen_dec['decision_id']}_{len(ApprovalLog(approval_path).read_raw())+1:04d}"
+                            record = build_approval_record(
+                                approval_id=approval_id,
+                                decision=chosen_dec,
+                                product_package_id=session.package["package_id"],
+                                decision_log_path=log_path,
+                                decision_log_sha256_at_approval=log_sha,
+                                comment=appr_comment,
+                                candidate_manifest_sha256=(
+                                    list(session.package.get("candidate_manifest_sha256", {}).values())
+                                    or [None]
+                                )[0],
+                                segment_manifest_sha256=(
+                                    session.package.get("provenance") or {}
+                                ).get("segment_inventory_sha256"),
+                                provenance={
+                                    "explicit_user_approval": True,
+                                    "package_mode": "product",
+                                },
+                            )
+                            ApprovalLog(approval_path).append(record)
+                            st.success(f"Approval appended: {approval_id}")
+                        except Exception as exc:  # noqa: BLE001
+                            st.error(str(exc))
+                st.write("Approval log (append-only)")
+                st.json(ApprovalLog(approval_path).read_raw())
 
 
 def main() -> None:
