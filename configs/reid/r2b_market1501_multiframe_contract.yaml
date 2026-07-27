@@ -1,0 +1,82 @@
+# ReID-R2B — Market1501 multi-frame tracklet ablation (pre-registered before scores)
+# Schema: target_001_reid_r2b_contract_v1
+# Holdout v2 role: development_and_error_analysis_only
+# SportsReID / SoccerNet-trained checkpoint: forbidden in this gate
+
+schema_version: target_001_reid_r2b_contract_v1
+experiment_id: target_001_reid_r2b_market1501_multiframe
+holdout_role: development_and_error_analysis_only
+
+model:
+  name: osnet_x1_0
+  checkpoint_path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  checkpoint_sha256: 2809d3227f7d078f6045f7feb874a34d0684f0e0057b264b99adccf7d4519154
+  checkpoint_bytes: 10399605
+  input_hw: [256, 128]
+  embedding_dim: 512
+  imagenet_mean: [0.485, 0.456, 0.406]
+  imagenet_std: [0.229, 0.224, 0.225]
+  device: cpu
+  sportsreid_forbidden: true
+
+scoring:
+  formula: TARGET_DISTRACTOR_MAX_MARGIN
+  primary: S = T_max - D_max
+  gallery_immutable: true
+  experiment_a_rescore_forbidden: true
+
+frame_selection:
+  max_frames_per_segment: 12
+  min_frames_when_available: 3
+  global_sharpness_threshold: null
+  bbox_clamp_policy: floor_ceil_int_crop_after_float_clamp_to_frame
+
+variants:
+  B1:
+    name: uniform_temporal
+    selection: uniform_temporal
+    representation: l2_mean
+  B2:
+    name: quality_temporal_diversity_l2_mean
+    selection: quality_temporal_diversity
+    representation: l2_mean
+  B3:
+    name: quality_temporal_diversity_medoid
+    selection: quality_temporal_diversity
+    representation: embedding_medoid
+
+variant_selection_priority:
+  - metric_improvement
+  - same_team_separation
+  - positive_reentry_consistency
+  - explainability
+  - lower_complexity
+  - deterministic_behavior
+tie_break_simpler_first: [B1, B2, B3]
+
+outcome_rules_preregistered:
+  MULTIFRAME_STRONG_IMPROVEMENT:
+    ap_abs_improvement_min: 0.15
+    auroc_abs_improvement_min: 0.10
+    same_team_auroc_abs_improvement_min: 0.08
+    recall_at_10_min: 0.50
+    positive_median_rank_must_improve: true
+    margin_must_improve: true
+    silent_query_drop_max: 0
+  MULTIFRAME_DIRECTIONAL_IMPROVEMENT:
+    ap_must_increase: true
+    auroc_must_increase: true
+    same_team_auroc_must_not_decrease: true
+    positive_median_rank_must_improve: true
+    query_drop_max: 0
+  MULTIFRAME_MIXED_OR_OVERLAPPING: {}
+  MULTIFRAME_NO_MEANINGFUL_IMPROVEMENT: {}
+  MULTIFRAME_REGRESSION: {}
+
+governance:
+  automatic_identity_assignment: false
+  automatic_gallery_expansion: false
+  holdout_to_gallery_transfer: false
+  threshold_selected: false
+  jersey_evidence: false
+  deployment_claim_forbidden: true
