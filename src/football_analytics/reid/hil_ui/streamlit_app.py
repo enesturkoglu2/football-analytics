@@ -36,11 +36,24 @@ from football_analytics.reid.hil_ui.geometry import (  # noqa: E402
     resolve_click_to_bbox,
 )
 from football_analytics.reid.hil_ui.compat import streamlit_image  # noqa: E402
+from football_analytics.reid.hil_ui.dense_observations import (  # noqa: E402
+    attach_candidate_ids,
+    build_dense_observations_from_mapping,
+    load_mapping_jsonl,
+)
+from football_analytics.reid.hil_ui.gallery_quality import audit_gallery_candidates  # noqa: E402
 from football_analytics.reid.hil_ui.gallery_view import (  # noqa: E402
     validate_gallery_crop_for_display,
 )
+from football_analytics.reid.hil_ui.interactive_video_component import (  # noqa: E402
+    interactive_video_review,
+)
+from football_analytics.reid.hil_ui.interactive_video_media import (  # noqa: E402
+    ensure_interactive_review_proxy,
+)
 from football_analytics.reid.hil_ui.media import decode_frame_to_cache  # noqa: E402
 from football_analytics.reid.hil_ui.observations import load_observation_lookup  # noqa: E402
+from football_analytics.reid.hil_c2.product_package import _segment_id  # noqa: E402
 from football_analytics.reid.multi_event_hil.review_clips import (  # noqa: E402
     bboxes_from_candidates_for_window,
     extract_event_window_clip,
@@ -186,7 +199,7 @@ def run_app() -> None:
     session = st.session_state.session
     package_mode = str((session.package.get("provenance") or {}).get("package_mode") or "")
     is_product = package_mode == "product" or str(session.package.get("run_id", "")).startswith(
-        "hil_c2_product"
+        ("hil_c2_product", "mehil_run")
     )
     if is_product:
         st.info(
@@ -194,16 +207,210 @@ def run_app() -> None:
             "Timeline Approval on the Approvals tab."
         )
 
-    tab_pkg, tab_queue, tab_review, tab_hist, tab_appr, tab_gal = st.tabs(
+    tab_live, tab_pkg, tab_queue, tab_review, tab_hist, tab_appr, tab_gal = st.tabs(
         [
+            "Interactive Video",
             "Session / Package",
             "Recovery Queue",
-            "Recovery Review",
+            "Frame Fallback / Debug",
             "Decision History",
             "Timeline Approvals",
             "Match Gallery",
         ]
     )
+
+    with tab_live:
+        st.subheader("True interactive video tracking review")
+        st.caption(
+            "HTML5 video + synchronized canvas overlay. Click a moving bbox to select a tracklet. "
+            "Playback does not rerun detection/tracking."
+        )
+        event = session.current_event
+        st.write(
+            {
+                "event_id": event["event_id"],
+                "event_type": event["event_type"],
+                "window": [
+                    event["review_window_start_frame"],
+                    event["review_window_end_frame"],
+                ],
+            }
+        )
+        nav_a, nav_b = st.columns(2)
+        if nav_a.button("Previous Event", key="live_prev"):
+            session.previous_event()
+            st.session_state.selection = {}
+            st.rerun()
+        if nav_b.button("Next Event", key="live_next"):
+            session.next_event()
+            st.session_state.selection = {}
+            st.rerun()
+
+        man = session.current_manifest()
+        candidates = sort_candidates_for_display(man["candidates"]) if man else []
+
+        # Dense observations from external mapping (read-only)
+        mapping_path = None
+        for root in session.package.get("read_only_source_roots_resolved") or []:
+            cand = (
+                Path(root)
+                / "inventory"
+                / "target_001_external_track_candidate_mapping.jsonl"
+            )
+            if cand.is_file():
+                mapping_path = cand
+                break
+        dens = {}
+        if mapping_path is not None:
+            codes = sorted(
+                {
+                    str((c.get("metadata") or {}).get("external_candidate_code") or "")
+                    for c in candidates
+                }
+                | {
+                    str(c["segment_id"]).replace("EXT_SEG_", "EXT_")
+                    for c in candidates
+                    if str(c.get("segment_id", "")).startswith("EXT_SEG_")
+                }
+            )
+            codes = [c if c.startswith("EXT_") else c for c in codes if c]
+            # normalize EXT_SEG_004 → EXT_004
+            norm_codes = []
+            for c in codes:
+                if c.startswith("EXT_SEG_"):
+                    norm_codes.append("EXT_" + c.replace("EXT_SEG_", ""))
+                elif c.startswith("EXT_"):
+                    norm_codes.append(c)
+            dens = build_dense_observations_from_mapping(
+                load_mapping_jsonl(mapping_path),
+                codes=sorted(set(norm_codes)),
+                segment_id_fn=_segment_id,
+            )
+            dens = attach_candidate_ids(dens, candidates)
+
+        markers = []
+        for ev in session.events:
+            markers.append(
+                {
+                    "event_id": ev["event_id"],
+                    "label": f"{ev['event_type'].split('_')[-1]} @ {ev['review_window_start_frame']}",
+                    "frame_index": int(ev["review_window_start_frame"]),
+                }
+            )
+
+        sel = st.session_state.selection or {}
+        track_end = None
+        if sel.get("selected_segment_id") and dens:
+            # infer end from last frame containing that segment
+            last = None
+            for fi_s, rows in dens.items():
+                if any(r.get("segment_id") == sel.get("selected_segment_id") for r in rows):
+                    last = int(fi_s)
+            track_end = last
+
+        proxy_info = None
+        if session.package.get("source_video_available"):
+            proxy_path = (
+                Path(session.package["writable_session_root_resolved"])
+                / "interactive_review"
+                / "source_proxy_960.mp4"
+            )
+            try:
+                proxy_info = ensure_interactive_review_proxy(
+                    source_video=Path(session.package["source_video_resolved"]),
+                    source_video_sha256=session.package["source_video_sha256"],
+                    output_path=proxy_path,
+                )
+            except Exception as exc:  # noqa: BLE001
+                st.error(f"Interactive video proxy failed: {exc}")
+
+        if proxy_info:
+            click = interactive_video_review(
+                video_data_url=proxy_info["data_url"],
+                observations_by_frame=dens,
+                markers=markers,
+                selected_raw_track_id=sel.get("selected_raw_track_id"),
+                selected_segment_id=sel.get("selected_segment_id"),
+                track_end_frame=track_end,
+                fps=30.0,
+                video_width=1332,
+                video_height=746,
+                key=f"interactive_{event['event_id']}",
+            )
+            if isinstance(click, dict) and click.get("type") == "bbox_click":
+                st.session_state.selection = {
+                    "selected_candidate_id": click.get("candidate_id"),
+                    "selected_segment_id": click.get("segment_id"),
+                    "selected_raw_track_id": click.get("raw_track_id"),
+                    "selected_frame_index": click.get("frame_index"),
+                    "selected_bbox_xyxy": click.get("bbox_xyxy"),
+                    "direct_bbox_selection": click.get("candidate_id") is None,
+                    "listed_selection": click.get("candidate_id") is not None,
+                    "displayed_rank": None,
+                    "displayed_score": None,
+                    "displayed_T_max": None,
+                    "displayed_D_max": None,
+                    "displayed_model_id": None,
+                    "displayed_checkpoint_sha256": None,
+                    "source": "interactive_video_bbox_click",
+                }
+                st.success(
+                    f"Video click selection · {click.get('segment_id')} / "
+                    f"track {click.get('raw_track_id')} @ frame {click.get('frame_index')}"
+                )
+            elif isinstance(click, dict) and click.get("type") == "marker_seek":
+                for i, ev in enumerate(session.events):
+                    if ev["event_id"] == click.get("event_id"):
+                        session.set_event_index(i)
+                        break
+
+            card = selection_summary_card(st.session_state.selection or None)
+            if card:
+                st.success("Selected target card")
+                st.write(card)
+                st.write(
+                    {
+                        "track_start_end_inferred": [
+                            None,
+                            track_end,
+                        ],
+                        "proxy_sha256": proxy_info["proxy_sha256"],
+                    }
+                )
+
+            reviewer = st.text_input("Reviewer", value="hil_b_reviewer", key="live_reviewer")
+            comment = st.text_area("Comment", value="", key="live_comment")
+            confidence = st.selectbox(
+                "Confidence", ["unknown", "probable", "confirmed"], key="live_conf"
+            )
+            if st.button("Submit CONFIRM_TARGET from video selection", key="live_confirm"):
+                try:
+                    if not st.session_state.selection:
+                        raise RuntimeError("no video selection")
+                    result = submit_decision(
+                        session.decision_log,
+                        event=event,
+                        candidate_manifest=man,
+                        action=DecisionAction.CONFIRM_TARGET,
+                        reviewer=reviewer,
+                        selection=st.session_state.selection,
+                        comment=comment,
+                        confidence=confidence,
+                        training_use_approved=False,
+                        gallery_use_approved=False,
+                    )
+                    st.success(SUBMIT_SUCCESS_MESSAGE)
+                    st.json(
+                        {
+                            "decision_id": result["decision"]["decision_id"],
+                            "log_sha256": result["log_integrity"]["sha256"],
+                        }
+                    )
+                except Exception as exc:  # noqa: BLE001
+                    st.error(str(exc))
+            st.caption("Timeline Approval remains on the Timeline Approvals tab.")
+        else:
+            st.warning("Source video unavailable for interactive review.")
 
     with tab_pkg:
         summary = session.package_summary()
@@ -777,11 +984,17 @@ def run_app() -> None:
             crop_man = json.loads(crop_man_path.read_text(encoding="utf-8"))
             gal_log = GalleryApprovalLog(gal_log_path)
             active = resolve_active_gallery_approvals(gal_log.read_raw())
+            quality = audit_gallery_candidates(
+                crop_man.get("candidates") or [],
+                source_frame_size=(1332, 746),
+            )
+            st.warning(quality["user_message"])
             segs = {c.get("segment_id") for c in crop_man.get("candidates") or []}
             tracks = {str(c.get("raw_track_id")) for c in crop_man.get("candidates") or []}
             st.write(
                 {
                     "candidate_count": crop_man.get("candidate_count"),
+                    "usable_gallery_candidates": quality["usable_count"],
                     "same_segment_ids": sorted(segs),
                     "same_raw_tracks": sorted(tracks),
                     "active_approvals": len(active),
@@ -792,17 +1005,20 @@ def run_app() -> None:
             match_id = (session.package.get("provenance") or {}).get("match_id") or "unknown"
             analysis_run_id = session.package.get("run_id")
             st.text_input("Gallery reviewer", key="gal_reviewer", value="hil_gallery_reviewer")
+            audits_by_id = {a.get("crop_id"): a for a in quality["audits"]}
             for crop in crop_man.get("candidates") or []:
-                validation = validate_gallery_crop_for_display(crop)
+                validation = audits_by_id.get(crop["crop_id"]) or validate_gallery_crop_for_display(
+                    crop
+                )
                 cols = st.columns([2, 3, 1])
                 with cols[0]:
-                    if validation["visible"]:
+                    if validation.get("visible"):
                         from PIL import Image
 
                         streamlit_image(
                             cols[0],
                             Image.open(crop["crop_path"]),
-                            caption=crop["crop_id"],
+                            caption=f"{crop['crop_id']} · {validation.get('quality_class')}",
                             use_column_width=True,
                         )
                     else:
@@ -818,26 +1034,26 @@ def run_app() -> None:
                             validation.get("width"),
                             validation.get("height"),
                         ],
-                        "blur_visibility_metadata": crop.get("visibility") or {},
-                        "contamination_metadata": crop.get("contamination")
-                        or crop.get("provenance", {}).get("contamination")
-                        or {},
+                        "player_pixel_height": validation.get("player_pixel_height"),
+                        "blur_laplacian_variance": validation.get("blur_laplacian_variance"),
+                        "clipping": validation.get("clipping"),
+                        "quality_class": validation.get("quality_class"),
                         "approved": crop["crop_id"] in active,
-                        "approval_enabled": validation["approval_enabled"],
-                        "sha_ok": validation.get("actual_sha256")
-                        == str(crop.get("crop_sha256") or "").lower(),
+                        "approval_enabled": bool(validation.get("approval_enabled")),
                     }
                 )
                 already = crop["crop_id"] in active
-                approve_disabled = (not validation["approval_enabled"]) or already
+                approve_disabled = (not validation.get("approval_enabled")) or already
                 if cols[2].button(
                     "Approve gallery member",
                     key=f"gal_{crop['crop_id']}",
                     disabled=approve_disabled,
                 ):
                     try:
-                        if not validation["approval_enabled"]:
-                            raise RuntimeError("approval blocked: image not verified visible")
+                        if not validation.get("approval_enabled"):
+                            raise RuntimeError(
+                                "approval blocked: crop failed gallery quality gate"
+                            )
                         record = build_gallery_approval(
                             approval_id=(
                                 f"gal_{crop['crop_id']}_"
@@ -885,6 +1101,11 @@ def run_app() -> None:
                         st.rerun()
                     except Exception as exc:  # noqa: BLE001
                         st.error(str(exc))
+            if quality["usable_count"] == 0:
+                st.info(
+                    "No USABLE_GALLERY_CANDIDATE crops. Gallery member count stays 0; "
+                    "embedding will not run; HIL workflow can continue without helper ranking."
+                )
             st.write("Gallery approval log (append-only)")
             st.json(gal_log.read_raw())
 

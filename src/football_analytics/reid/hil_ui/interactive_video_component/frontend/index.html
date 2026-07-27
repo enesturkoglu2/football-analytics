@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <style>
+    :root { color-scheme: dark; }
+    body {
+      margin: 0;
+      font-family: ui-sans-serif, system-ui, sans-serif;
+      background: #0f1115;
+      color: #e8eaed;
+    }
+    .wrap { padding: 8px; }
+    .stage {
+      position: relative;
+      width: 100%;
+      max-width: 960px;
+      margin: 0 auto;
+      background: #000;
+    }
+    video, canvas {
+      display: block;
+      width: 100%;
+      height: auto;
+    }
+    canvas {
+      position: absolute;
+      left: 0;
+      top: 0;
+      pointer-events: auto;
+      cursor: crosshair;
+    }
+    .bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      margin-top: 8px;
+      font-size: 13px;
+    }
+    button {
+      background: #1f6feb;
+      color: white;
+      border: 0;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+    }
+    button.secondary { background: #30363d; }
+    .msg {
+      margin-top: 6px;
+      min-height: 1.2em;
+      color: #f0c674;
+      font-size: 13px;
+    }
+    .markers button { background: #6e40c9; }
+    input[type="range"] { flex: 1; min-width: 160px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="stage" id="stage">
+      <video id="vid" playsinline preload="auto"></video>
+      <canvas id="cv"></canvas>
+    </div>
+    <div class="bar">
+      <button id="playBtn" type="button">Play</button>
+      <button id="pauseBtn" class="secondary" type="button">Pause</button>
+      <span id="clock">t=0.00s · f=0</span>
+      <input id="seek" type="range" min="0" max="0" step="0.01" value="0" />
+    </div>
+    <div class="bar markers" id="markers"></div>
+    <div class="msg" id="msg"></div>
+    <div class="msg" id="sel" style="color:#7ee787"></div>
+  </div>
+  <script>
+    const Streamlit = {
+      setComponentReady: () => {
+        window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:componentReady", apiVersion: 1 }, "*");
+      },
+      setFrameHeight: (height) => {
+        window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:setFrameHeight", height }, "*");
+      },
+      setComponentValue: (value) => {
+        window.parent.postMessage({ isStreamlitMessage: true, type: "streamlit:setComponentValue", value }, "*");
+      },
+      RENDER_EVENT: "streamlit:render",
+    };
+
+    const vid = document.getElementById("vid");
+    const cv = document.getElementById("cv");
+    const ctx = cv.getContext("2d");
+    const clock = document.getElementById("clock");
+    const msg = document.getElementById("msg");
+    const sel = document.getElementById("sel");
+    const seek = document.getElementById("seek");
+    const markersEl = document.getElementById("markers");
+
+    let args = {
+      observations_by_frame: {},
+      markers: [],
+      selected_raw_track_id: null,
+      selected_segment_id: null,
+      track_end_frame: null,
+      fps: 30,
+      video_width: 1332,
+      video_height: 746,
+    };
+    let nativeW = 1332;
+    let nativeH = 746;
+    let lastSentClick = null;
+
+    function currentFrame() {
+      const fps = args.fps || 30;
+      return Math.max(0, Math.floor((vid.currentTime || 0) * fps + 1e-6));
+    }
+
+    function syncCanvasSize() {
+      const rect = vid.getBoundingClientRect();
+      cv.width = Math.max(1, Math.round(rect.width));
+      cv.height = Math.max(1, Math.round(rect.height));
+      cv.style.width = rect.width + "px";
+      cv.style.height = rect.height + "px";
+    }
+
+    function boxesForFrame(fi) {
+      const rows = args.observations_by_frame[String(fi)] || [];
+      return rows;
+    }
+
+    function draw() {
+      syncCanvasSize();
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      const fi = currentFrame();
+      const sx = cv.width / nativeW;
+      const sy = cv.height / nativeH;
+      const rows = boxesForFrame(fi);
+      let selectedVisible = false;
+
+      for (const row of rows) {
+        const b = row.bbox_xyxy;
+        if (!b || b.length !== 4) continue;
+        const x1 = b[0] * sx, y1 = b[1] * sy, x2 = b[2] * sx, y2 = b[3] * sy;
+        const isSel =
+          (args.selected_raw_track_id && String(row.raw_track_id) === String(args.selected_raw_track_id)) ||
+          (args.selected_segment_id && String(row.segment_id) === String(args.selected_segment_id));
+        ctx.lineWidth = isSel ? 3 : 2;
+        ctx.strokeStyle = isSel ? "#ff4d1a" : "#00dede";
+        ctx.strokeRect(x1, y1, x2 - x1, y2 - y1);
+        ctx.fillStyle = isSel ? "rgba(255,77,26,0.15)" : "rgba(0,222,222,0.08)";
+        ctx.fillRect(x1, y1, x2 - x1, y2 - y1);
+        ctx.fillStyle = isSel ? "#ff4d1a" : "#9be9ff";
+        ctx.font = "12px sans-serif";
+        ctx.fillText((row.segment_id || "") + " / " + (row.raw_track_id || ""), x1 + 2, Math.max(12, y1 - 4));
+        if (isSel) selectedVisible = true;
+      }
+
+      const t = vid.currentTime || 0;
+      clock.textContent = `t=${t.toFixed(2)}s · f=${fi}`;
+      if (!seek.matches(":active")) seek.value = String(t);
+
+      msg.textContent = "";
+      if (args.selected_raw_track_id || args.selected_segment_id) {
+        if (args.track_end_frame != null && fi > Number(args.track_end_frame)) {
+          msg.textContent = "TARGET TRACK ENDED — RECOVERY REQUIRED";
+        } else if (!selectedVisible) {
+          msg.textContent = "Selected target is not visible at this time";
+        }
+      }
+      requestAnimationFrame(draw);
+    }
+
+    function hitTest(cssX, cssY) {
+      const fi = currentFrame();
+      const sx = cv.width / nativeW;
+      const sy = cv.height / nativeH;
+      const rows = boxesForFrame(fi);
+      // prefer selected / smallest area containing point
+      let best = null;
+      let bestArea = Infinity;
+      for (const row of rows) {
+        const b = row.bbox_xyxy;
+        if (!b) continue;
+        const x1 = b[0] * sx, y1 = b[1] * sy, x2 = b[2] * sx, y2 = b[3] * sy;
+        if (cssX >= x1 && cssX <= x2 && cssY >= y1 && cssY <= y2) {
+          const area = Math.max(1, (x2 - x1) * (y2 - y1));
+          if (area < bestArea) {
+            bestArea = area;
+            best = row;
+          }
+        }
+      }
+      return best;
+    }
+
+    cv.addEventListener("click", (ev) => {
+      const rect = cv.getBoundingClientRect();
+      const x = ev.clientX - rect.left;
+      const y = ev.clientY - rect.top;
+      const hit = hitTest(x, y);
+      const fi = currentFrame();
+      if (!hit) {
+        Streamlit.setComponentValue({
+          type: "bbox_miss",
+          frame_index: fi,
+          time_seconds: vid.currentTime,
+        });
+        return;
+      }
+      const payload = {
+        type: "bbox_click",
+        frame_index: fi,
+        time_seconds: vid.currentTime,
+        raw_track_id: String(hit.raw_track_id),
+        segment_id: String(hit.segment_id),
+        candidate_id: hit.candidate_id || null,
+        bbox_xyxy: hit.bbox_xyxy,
+        external_candidate_code: hit.external_candidate_code || null,
+      };
+      lastSentClick = payload;
+      args.selected_raw_track_id = payload.raw_track_id;
+      args.selected_segment_id = payload.segment_id;
+      sel.textContent =
+        `Selected · segment ${payload.segment_id} · raw_track ${payload.raw_track_id} · frame ${fi}`;
+      Streamlit.setComponentValue(payload);
+    });
+
+    document.getElementById("playBtn").onclick = () => vid.play();
+    document.getElementById("pauseBtn").onclick = () => vid.pause();
+    seek.addEventListener("input", () => {
+      vid.currentTime = Number(seek.value || 0);
+    });
+
+    function renderMarkers() {
+      markersEl.innerHTML = "";
+      for (const m of args.markers || []) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.textContent = m.label || m.event_id || "marker";
+        b.onclick = () => {
+          const fps = args.fps || 30;
+          const f = Number(m.frame_index || 0);
+          vid.currentTime = f / fps;
+          Streamlit.setComponentValue({
+            type: "marker_seek",
+            event_id: m.event_id || null,
+            frame_index: f,
+            time_seconds: vid.currentTime,
+          });
+        };
+        markersEl.appendChild(b);
+      }
+    }
+
+    function onRender(event) {
+      if (!event.data || event.data.type !== Streamlit.RENDER_EVENT) return;
+      const a = event.data.args || {};
+      args = Object.assign({}, args, a);
+      nativeW = Number(args.video_width || nativeW);
+      nativeH = Number(args.video_height || nativeH);
+      if (a.video_data_url && vid.src !== a.video_data_url) {
+        vid.src = a.video_data_url;
+        vid.load();
+      }
+      if (a.selected_raw_track_id) {
+        sel.textContent =
+          `Selected · segment ${a.selected_segment_id || "?"} · raw_track ${a.selected_raw_track_id}`;
+      }
+      renderMarkers();
+      Streamlit.setFrameHeight(document.documentElement.scrollHeight);
+    }
+
+    vid.addEventListener("loadedmetadata", () => {
+      seek.max = String(vid.duration || 0);
+      if (vid.videoWidth) nativeW = vid.videoWidth;
+      if (vid.videoHeight) nativeH = vid.videoHeight;
+      syncCanvasSize();
+      Streamlit.setFrameHeight(document.documentElement.scrollHeight);
+    });
+
+    window.addEventListener("message", onRender);
+    window.addEventListener("resize", syncCanvasSize);
+    Streamlit.setComponentReady();
+    Streamlit.setFrameHeight(640);
+    requestAnimationFrame(draw);
+  </script>
+</body>
+</html>
