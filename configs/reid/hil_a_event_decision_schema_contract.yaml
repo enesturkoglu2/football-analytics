@@ -1,0 +1,27 @@
+gate: REID_HIL_A_EVENT_AND_DECISION_SCHEMA_IMPLEMENTATION
+mode: schema_storage_validation_only
+forbidden:
+  streamlit_gradio_fastapi_install: true
+  package_or_environment_change: true
+  network_download: true
+  ui_server: true
+  video_inference: true
+  reid_scoring: true
+  automatic_identity_assignment: true
+  automatic_gallery_expansion: true
+  clip_download: true
+  full_timeline_implementation: true
+schemas:
+  event: target_recovery_event_v1
+  candidate_manifest: target_recovery_candidate_manifest_v1
+  decision: target_recovery_decision_v1
+storage:
+  decision_log: append_only_jsonl
+  undo: superseding_record_only
+defaults:
+  training_use_approved: false
+  gallery_use_approved: false
+sportsreid_helper:
+  model_id: osnet_x1_0_sportsreid_soccernet
+  role: metadata_rank_only
+exact_next_gate: REID_HIL_B_OFFLINE_REVIEW_UI_ENVIRONMENT_AND_IMPLEMENTATION
