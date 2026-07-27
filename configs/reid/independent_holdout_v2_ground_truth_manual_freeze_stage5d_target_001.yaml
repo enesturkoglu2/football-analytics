@@ -1,0 +1,114 @@
+# Stage 5D-F3L — Freeze human holdout v2 ground-truth decisions.
+# No detection/tracking/segmentation/OSNet/similarity/scoring/ranking/metric/threshold/identity.
+schema_version: reid_independent_holdout_v2_ground_truth_manual_freeze_config_v1
+stage: 5D-F3L
+device: cpu
+offline_required: true
+network_policy: pass_offline_stage5d_f3l_ground_truth_manual_freeze_only
+
+project_head_expected: d2c93831f6282cf984352ad9bf1f5e9e7c28d7e4
+project_head_message_expected: Add target 001 holdout v2 ground truth review package
+
+holdout_source:
+  path: data/test_clips/target_001_independent_holdout_v2.mp4
+  expected_sha256: bbfe3669cfbf39534f71a80131401bb4d9f931c7a4ea485404ab2fa207a6231f
+  read_forbidden: true
+
+evaluation_source:
+  path: data/test_clips/sample.mp4
+  read_forbidden: true
+
+external_enrollment_source:
+  path: data/enrollment_clips/target_001_external_enrollment_v1.mp4
+  read_forbidden: true
+
+yolo_checkpoint:
+  path: models/yolo11n.pt
+  load_forbidden: true
+
+osnet_checkpoint:
+  path: /home/enesturkoglu2/projects/soccernet/checkpoints/general-reid/osnet_x1_0_market1501_softmax_256x128.pth.tar
+  load_forbidden: true
+
+stage5d_f3k_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_ground_truth_review_package
+  expected_final_status: COMPLETED_STAGE5D_F3K_TARGET_001_NEW_INDEPENDENT_HOLDOUT_GROUND_TRUTH_REVIEW_PACKAGE_READY
+  expected_readiness: TARGET_001_INDEPENDENT_HOLDOUT_V2_GROUND_TRUTH_READY_FOR_HUMAN_REVIEW
+  expected_complete_universe: 243
+  expected_review_eligible: 141
+  expected_review_ineligible: 102
+  expected_review_items: 141
+  expected_crops: 141
+  expected_contact_sheets: 12
+  expected_sheet_distribution: [12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 12, 9]
+  expected_videos: 3
+  expected_video_distribution: [47, 47, 47]
+  expected_manual_decisions: 0
+  # Verified path (prompt typo enestur/ does not exist on this host).
+  snapshot_path: /mnt/c/Users/enest/Documents/football_analytics_recovery/rebuild_snapshots/REBUILD_STAGE5D_F3K_TARGET_001_HOLDOUT_V2_GT_REVIEW_d2c9383.tar.gz
+  expected_snapshot_sha256: 63af341120a9e2d6003cce89c9b14fecb68ca300f2d5fc3fa18debc2f02cfa2b
+
+stage5d_f3j_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_label_blind_universe
+  expected_final_status: COMPLETED_STAGE5D_F3J_TARGET_001_NEW_INDEPENDENT_HOLDOUT_LABEL_BLIND_UNIVERSE_BUILT
+  expected_segments: 243
+  expected_raw_tracks: 243
+  expected_pass_through: 243
+  expected_split: 0
+
+stage5d_f3h_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_target_distractor_scoring_contract_and_holdout_design
+  metric_contract_relpath: evaluation/target_001_new_holdout_metric_contract.json
+  ground_truth_policy_relpath: evaluation/target_001_new_holdout_ground_truth_policy.json
+
+stage5d_f3i_package:
+  path: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_ingestion_and_preflight
+  expected_final_status: COMPLETED_STAGE5D_F3I_TARGET_001_NEW_INDEPENDENT_HOLDOUT_INGESTED_AND_PREFLIGHT_PASSED
+
+human_review:
+  target_id: target_001
+  target_alias: sarı takım 5 numaralı oyuncu
+  reviewer: Furkan
+  final_approver: Furkan
+  review_basis: human_visual_review
+  assistant_quality_triage_used: true
+  automated_identity_used: false
+  automated_team_classifier_used: false
+  automated_OCR_used: false
+  similarity_used: false
+  ranking_used: false
+  gallery_match_used: false
+
+expected_distribution:
+  reviewed_total: 141
+  target_occurrence_yes: 10
+  target_occurrence_no: 105
+  same_team_target_occurrence_no: 55
+  other_team_target_occurrence_no: 50
+  non_player: 5
+  invalid: 7
+  multi_person_ambiguous: 14
+  uncertain: 0
+  clean_positive_segments: 10
+  clean_negative_segments: 110
+  clean_same_team_negative_segments: 55
+  reviewed_metric_excluded: 21
+  unreviewed_ineligible: 102
+  complete_universe: 243
+
+component_policy: ONE_FROZEN_SEGMENT_PER_COMPONENT_NO_CROSS_TRACK_LINK_EVIDENCE
+
+policy:
+  holdout_enrollment_forbidden: true
+  gallery_growth_forbidden: true
+  threshold_calibration_forbidden: true
+  threshold_selected: false
+  identity_assignment: false
+  gallery_mutation: false
+  embeddings: false
+  scoring: false
+  ranking: false
+  metrics: false
+
+output:
+  final_dir: outputs/reid/full_stage4b_rebuild_r2_stage5d_target_001_independent_holdout_v2_ground_truth_manual_freeze
