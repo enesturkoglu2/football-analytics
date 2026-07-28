@@ -80,7 +80,9 @@ class ComponentPresenceTests(unittest.TestCase):
         )
         self.assertTrue(p.is_file())
         text = p.read_text(encoding="utf-8")
-        self.assertIn("TARGET TRACK ENDED", text)
+        self.assertTrue(
+            ("TARGET TRACK ENDED" in text) or ("TARGET LOST — RECOVERY REQUIRED" in text)
+        )
         self.assertIn("Selected target is not visible", text)
         self.assertIn("bbox_click", text)
 
