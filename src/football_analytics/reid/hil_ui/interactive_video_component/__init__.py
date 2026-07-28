@@ -19,6 +19,8 @@ def interactive_video_review(
     fps: float = 30.0,
     video_width: int = 960,
     video_height: int = 540,
+    force_pause: bool = False,
+    seek_frame: int | None = None,
     key: str | None = None,
     default: Any = None,
 ):
@@ -43,6 +45,8 @@ def interactive_video_review(
         fps=float(fps),
         video_width=int(video_width),
         video_height=int(video_height),
+        force_pause=bool(force_pause),
+        seek_frame=seek_frame,
         key=key,
         default=default,
     )

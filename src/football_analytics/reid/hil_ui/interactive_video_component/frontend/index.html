@@ -109,6 +109,8 @@
     let nativeW = 1332;
     let nativeH = 746;
     let lastSentClick = null;
+    let lockedSelectionFrame = null;
+    let lostPauseSent = false;
 
     function currentFrame() {
       const fps = args.fps || 30;
@@ -162,9 +164,24 @@
       msg.textContent = "";
       if (args.selected_raw_track_id || args.selected_segment_id) {
         if (args.track_end_frame != null && fi > Number(args.track_end_frame)) {
-          msg.textContent = "TARGET TRACK ENDED — RECOVERY REQUIRED";
+          msg.textContent = "TARGET LOST — RECOVERY REQUIRED";
+          if (!lostPauseSent) {
+            try { vid.pause(); } catch (e) {}
+            lostPauseSent = true;
+            Streamlit.setComponentValue({
+              type: "target_lost",
+              frame_index: fi,
+              time_seconds: vid.currentTime,
+              track_end_frame: Number(args.track_end_frame),
+              raw_track_id: args.selected_raw_track_id,
+              segment_id: args.selected_segment_id,
+              paused: true,
+            });
+          }
         } else if (!selectedVisible) {
           msg.textContent = "Selected target is not visible at this time";
+        } else {
+          lostPauseSent = false;
         }
       }
       requestAnimationFrame(draw);
@@ -197,13 +214,16 @@
       const rect = cv.getBoundingClientRect();
       const x = ev.clientX - rect.left;
       const y = ev.clientY - rect.top;
-      const hit = hitTest(x, y);
       const fi = currentFrame();
+      const hit = hitTest(x, y);
+      // Always pause on click so selection is not lost while video advances
+      try { vid.pause(); } catch (e) {}
       if (!hit) {
         Streamlit.setComponentValue({
           type: "bbox_miss",
           frame_index: fi,
           time_seconds: vid.currentTime,
+          paused: true,
         });
         return;
       }
@@ -216,12 +236,15 @@
         candidate_id: hit.candidate_id || null,
         bbox_xyxy: hit.bbox_xyxy,
         external_candidate_code: hit.external_candidate_code || null,
+        paused: true,
+        pause_reason: "bbox_click",
       };
       lastSentClick = payload;
       args.selected_raw_track_id = payload.raw_track_id;
       args.selected_segment_id = payload.segment_id;
+      lockedSelectionFrame = fi;
       sel.textContent =
-        `Selected · segment ${payload.segment_id} · raw_track ${payload.raw_track_id} · frame ${fi}`;
+        `Selected · segment ${payload.segment_id} · raw_track ${payload.raw_track_id} · frame ${fi} · PAUSED`;
       Streamlit.setComponentValue(payload);
     });
 
@@ -265,6 +288,14 @@
       if (a.selected_raw_track_id) {
         sel.textContent =
           `Selected · segment ${a.selected_segment_id || "?"} · raw_track ${a.selected_raw_track_id}`;
+        lostPauseSent = false;
+      }
+      if (a.force_pause) {
+        try { vid.pause(); } catch (e) {}
+      }
+      if (a.seek_frame != null && Number.isFinite(Number(a.seek_frame))) {
+        const fps = args.fps || 30;
+        vid.currentTime = Number(a.seek_frame) / fps;
       }
       renderMarkers();
       Streamlit.setFrameHeight(document.documentElement.scrollHeight);

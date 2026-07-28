@@ -54,6 +54,26 @@ from football_analytics.reid.short_video.provisional_timeline import (  # noqa: 
     target_status_from_selection,
     write_provisional,
 )
+from football_analytics.reid.short_video.one_click import (  # noqa: E402
+    one_click_confirm_and_approve,
+    rank_recovery_candidates,
+)
+
+
+def _track_span_from_dense(dens: dict, segment_id: str | None, raw_track_id: str | None):
+    first = last = None
+    for fi_s, rows in dens.items():
+        for r in rows:
+            hit = False
+            if segment_id and r.get("segment_id") == segment_id:
+                hit = True
+            elif raw_track_id and str(r.get("raw_track_id")) == str(raw_track_id):
+                hit = True
+            if hit:
+                fi = int(fi_s)
+                first = fi if first is None else min(first, fi)
+                last = fi if last is None else max(last, fi)
+    return first, last
 from football_analytics.reid.hil_ui.gallery_quality import audit_gallery_candidates  # noqa: E402
 from football_analytics.reid.hil_ui.gallery_view import (  # noqa: E402
     validate_gallery_crop_for_display,
@@ -398,6 +418,13 @@ def run_app() -> None:
                 fps=video_fps,
                 video_width=video_w,
                 video_height=video_h,
+                force_pause=bool(st.session_state.get("sv_force_pause")),
+                seek_frame=(
+                    int(sel["selected_frame_index"])
+                    if is_short_video and sel.get("selected_frame_index") is not None
+                    and st.session_state.get("sv_force_pause")
+                    else None
+                ),
                 key=f"interactive_{event['event_id']}",
             )
             if isinstance(click, dict) and click.get("type") == "bbox_click":
@@ -416,11 +443,36 @@ def run_app() -> None:
                     "displayed_model_id": None,
                     "displayed_checkpoint_sha256": None,
                     "source": "interactive_video_bbox_click",
+                    "paused": True,
                 }
+                st.session_state["sv_force_pause"] = True
                 st.success(
-                    f"Video click selection · {click.get('segment_id')} / "
+                    f"PAUSED · seçim kilitlendi · {click.get('segment_id')} / "
                     f"track {click.get('raw_track_id')} @ frame {click.get('frame_index')}"
                 )
+            elif isinstance(click, dict) and click.get("type") == "target_lost":
+                st.session_state["sv_lost"] = click
+                st.session_state["sv_force_pause"] = True
+                session_root = Path(session.package["writable_session_root_resolved"])
+                prov_path = session_root / "provisional_timeline.json"
+                from football_analytics.reid.short_video.provisional_timeline import (
+                    empty_provisional,
+                )
+
+                provisional = load_provisional(prov_path) or empty_provisional(
+                    target_id=session.package["target_id"],
+                    video_id=str(prov.get("video_id") or ""),
+                )
+                provisional = mark_unresolved(
+                    provisional,
+                    start_frame=int(click.get("track_end_frame") or 0) + 1,
+                    end_frame=int(click.get("frame_index") or 0),
+                    fps=video_fps,
+                    previous_segment_id=click.get("segment_id"),
+                    previous_raw_track_id=click.get("raw_track_id"),
+                )
+                write_provisional(prov_path, provisional)
+                st.error("TARGET LOST — RECOVERY REQUIRED")
             elif isinstance(click, dict) and click.get("type") == "marker_seek":
                 for i, ev in enumerate(session.events):
                     if ev["event_id"] == click.get("event_id"):
@@ -431,88 +483,243 @@ def run_app() -> None:
             if card:
                 st.success("Selected target card")
                 st.write(card)
+                span = _track_span_from_dense(
+                    dens,
+                    st.session_state.selection.get("selected_segment_id"),
+                    st.session_state.selection.get("selected_raw_track_id"),
+                )
                 st.write(
                     {
-                        "track_start_end_inferred": [
-                            None,
-                            track_end,
-                        ],
+                        "full_raw_track_interval": span,
+                        "selected_frame": st.session_state.selection.get(
+                            "selected_frame_index"
+                        ),
                         "proxy_sha256": proxy_info["proxy_sha256"],
                     }
                 )
 
-            reviewer = st.text_input("Reviewer", value="hil_b_reviewer", key="live_reviewer")
-            comment = st.text_area("Comment", value="", key="live_comment")
-            confidence = st.selectbox(
-                "Confidence", ["unknown", "probable", "confirmed"], key="live_conf"
-            )
-            if st.button("Submit CONFIRM_TARGET from video selection", key="live_confirm"):
-                try:
-                    if not st.session_state.selection:
-                        raise RuntimeError("no video selection")
-                    result = submit_decision(
-                        session.decision_log,
-                        event=event,
-                        candidate_manifest=man,
-                        action=DecisionAction.CONFIRM_TARGET,
-                        reviewer=reviewer,
-                        selection=st.session_state.selection,
-                        comment=comment,
-                        confidence=confidence,
-                        training_use_approved=False,
-                        gallery_use_approved=False,
-                    )
-                    if is_short_video and track_end is not None:
-                        prov_path = (
-                            Path(session.package["writable_session_root_resolved"])
-                            / "provisional_timeline.json"
+            if is_short_video:
+                st.markdown("### One-click action")
+                if st.button(
+                    "Hedef olarak onayla ve devam et",
+                    key="sv_one_click_confirm",
+                    type="primary",
+                ):
+                    try:
+                        if not st.session_state.selection:
+                            raise RuntimeError("önce bbox seçin")
+                        span = _track_span_from_dense(
+                            dens,
+                            st.session_state.selection.get("selected_segment_id"),
+                            st.session_state.selection.get("selected_raw_track_id"),
                         )
-                        provisional = load_provisional(prov_path)
-                        if not provisional:
-                            from football_analytics.reid.short_video.provisional_timeline import (
-                                empty_provisional,
+                        if span[0] is None or span[1] is None:
+                            raise RuntimeError("raw track interval bulunamadı")
+                        approval_path = Path(
+                            (session.package.get("provenance") or {}).get(
+                                "approval_log_path"
                             )
-
-                            provisional = empty_provisional(
-                                target_id=session.package["target_id"],
-                                video_id=str(prov.get("video_id") or ""),
+                            or (
+                                Path(session.package["writable_session_root_resolved"])
+                                / "timeline_approval_log.jsonl"
                             )
-                        start_f = int(
-                            st.session_state.selection.get("selected_frame_index") or 0
                         )
-                        provisional = append_provisional_from_confirm(
-                            provisional,
-                            decision_id=result["decision"]["decision_id"],
-                            event_id=event["event_id"],
-                            segment_id=str(
-                                st.session_state.selection.get("selected_segment_id")
-                            ),
-                            raw_track_id=str(
-                                st.session_state.selection.get("selected_raw_track_id")
-                            ),
-                            start_frame=start_f,
-                            end_frame=int(track_end),
+                        session_root = Path(
+                            session.package["writable_session_root_resolved"]
+                        )
+                        out = one_click_confirm_and_approve(
+                            decision_log=session.decision_log,
+                            approval_log_path=approval_path,
+                            event=event,
+                            candidate_manifest=man,
+                            selection=st.session_state.selection,
+                            package=session.package,
+                            track_start_frame=int(span[0]),
+                            track_end_frame=int(span[1]),
                             fps=video_fps,
+                            provisional_path=session_root / "provisional_timeline.json",
+                            approved_timeline_path=session_root
+                            / "approved_timeline.json",
+                            link_same_target=bool(
+                                st.session_state.get("sv_lost")
+                            ),
                         )
-                        write_provisional(prov_path, provisional)
-                    st.success(SUBMIT_SUCCESS_MESSAGE)
-                    st.json(
+                        st.session_state["sv_force_pause"] = False
+                        st.session_state["sv_lost"] = None
+                        st.success(
+                            "Onaylandı · decision + timeline approval yazıldı · "
+                            f"{out['decision']['decision_id']} / {out['approval']['approval_id']}"
+                        )
+                        st.rerun()
+                    except Exception as exc:  # noqa: BLE001
+                        st.error(str(exc))
+
+                # Recovery helpers when lost
+                if st.session_state.get("sv_lost") or t_status in {"LOST", "UNRESOLVED"}:
+                    st.markdown("### Recovery candidates")
+                    st.caption(
+                        "Otomatik identity confirmation yok. Helper sıralama açıklanabilir; "
+                        "aday gizlenmez."
+                    )
+                    ranked = rank_recovery_candidates(
+                        list(candidates),
+                        lost_frame=int(
+                            (st.session_state.get("sv_lost") or {}).get(
+                                "track_end_frame"
+                            )
+                            or track_end
+                            or 0
+                        ),
+                        previous_bbox=list(
+                            (st.session_state.selection or {}).get(
+                                "selected_bbox_xyxy"
+                            )
+                            or []
+                        )
+                        or None,
+                        fps=video_fps,
+                    )
+                    st.write(
+                        [
+                            {
+                                "candidate_id": c.get("candidate_id"),
+                                "segment_id": c.get("segment_id"),
+                                "raw_track_id": c.get("raw_track_id"),
+                                "helper_rank_score": c.get("helper_rank_score"),
+                                "signals": c.get("helper_signals"),
+                            }
+                            for c in ranked[:20]
+                        ]
+                    )
+                    st.info(
+                        f"Tüm eligible adaylar listede ({len(ranked)}). "
+                        "Videoda bbox'a tıklayıp ardından "
+                        "`Aynı hedefe bağla ve devam et` kullanın."
+                    )
+                    if st.button(
+                        "Aynı hedefe bağla ve devam et",
+                        key="sv_one_click_relink",
+                        type="primary",
+                    ):
+                        st.session_state["sv_lost"] = st.session_state.get("sv_lost") or {
+                            "track_end_frame": track_end
+                        }
+                        # reuse one-click with link flag via same button path
+                        try:
+                            if not st.session_state.selection:
+                                raise RuntimeError("yeni bbox seçin")
+                            span = _track_span_from_dense(
+                                dens,
+                                st.session_state.selection.get("selected_segment_id"),
+                                st.session_state.selection.get("selected_raw_track_id"),
+                            )
+                            approval_path = Path(
+                                (session.package.get("provenance") or {}).get(
+                                    "approval_log_path"
+                                )
+                                or (
+                                    Path(session.package["writable_session_root_resolved"])
+                                    / "timeline_approval_log.jsonl"
+                                )
+                            )
+                            session_root = Path(
+                                session.package["writable_session_root_resolved"]
+                            )
+                            out = one_click_confirm_and_approve(
+                                decision_log=session.decision_log,
+                                approval_log_path=approval_path,
+                                event=event,
+                                candidate_manifest=man,
+                                selection=st.session_state.selection,
+                                package=session.package,
+                                track_start_frame=int(span[0]),
+                                track_end_frame=int(span[1]),
+                                fps=video_fps,
+                                provisional_path=session_root
+                                / "provisional_timeline.json",
+                                approved_timeline_path=session_root
+                                / "approved_timeline.json",
+                                link_same_target=True,
+                            )
+                            st.session_state["sv_lost"] = None
+                            st.session_state["sv_force_pause"] = False
+                            st.success(
+                                f"Re-link OK · {out['decision']['decision_id']}"
+                            )
+                            st.rerun()
+                        except Exception as exc:  # noqa: BLE001
+                            st.error(str(exc))
+
+                # Simple live timeline strip
+                session_root = Path(session.package["writable_session_root_resolved"])
+                provisional = load_provisional(
+                    session_root / "provisional_timeline.json"
+                )
+                st.markdown("### Simple Target Timeline")
+                rows_tl = []
+                for iv in (provisional or {}).get("intervals") or []:
+                    rows_tl.append(
                         {
-                            "decision_id": result["decision"]["decision_id"],
-                            "log_sha256": result["log_integrity"]["sha256"],
+                            "status": iv.get("status"),
+                            "start": iv.get("start_timestamp"),
+                            "end": iv.get("end_timestamp"),
+                            "raw_track_id": iv.get("raw_track_id"),
+                            "segment_id": iv.get("segment_id"),
                         }
                     )
-                except Exception as exc:  # noqa: BLE001
-                    st.error(str(exc))
-            if is_short_video:
-                st.caption(
-                    "Provisional timeline updates immediately. "
-                    "Approved timeline requires Timeline Approval (Advanced)."
-                )
-                with st.expander("Advanced · Timeline Approval / Package"):
-                    st.write(session.package_summary())
-                    st.caption("Use Decision History + recovery flow; full Approvals also below in non-SV packages.")
+                for iv in (provisional or {}).get("unresolved_intervals") or []:
+                    rows_tl.append(
+                        {
+                            "status": "UNRESOLVED",
+                            "start": iv.get("start_timestamp"),
+                            "end": iv.get("end_timestamp"),
+                            "raw_track_id": None,
+                            "segment_id": None,
+                        }
+                    )
+                rows_tl.sort(key=lambda r: float(r.get("start") or 0))
+                if rows_tl:
+                    for r in rows_tl:
+                        st.write(
+                            f"{float(r['start'] or 0):06.2f}–{float(r['end'] or 0):06.2f}  "
+                            f"Track {r.get('raw_track_id') or '—'}  {r.get('status')}"
+                        )
+                else:
+                    st.caption("Henüz timeline satırı yok — bbox seçip one-click onaylayın.")
+                with st.expander("Advanced Details"):
+                    st.json(provisional or {})
+                    st.caption("Decision History / package debug Advanced sekmesinde.")
             else:
+                reviewer = st.text_input("Reviewer", value="hil_b_reviewer", key="live_reviewer")
+                comment = st.text_area("Comment", value="", key="live_comment")
+                confidence = st.selectbox(
+                    "Confidence", ["unknown", "probable", "confirmed"], key="live_conf"
+                )
+                if st.button("Submit CONFIRM_TARGET from video selection", key="live_confirm"):
+                    try:
+                        if not st.session_state.selection:
+                            raise RuntimeError("no video selection")
+                        result = submit_decision(
+                            session.decision_log,
+                            event=event,
+                            candidate_manifest=man,
+                            action=DecisionAction.CONFIRM_TARGET,
+                            reviewer=reviewer,
+                            selection=st.session_state.selection,
+                            comment=comment,
+                            confidence=confidence,
+                            training_use_approved=False,
+                            gallery_use_approved=False,
+                        )
+                        st.success(SUBMIT_SUCCESS_MESSAGE)
+                        st.json(
+                            {
+                                "decision_id": result["decision"]["decision_id"],
+                                "log_sha256": result["log_integrity"]["sha256"],
+                            }
+                        )
+                    except Exception as exc:  # noqa: BLE001
+                        st.error(str(exc))
                 st.caption("Timeline Approval remains on the Timeline Approvals tab.")
         else:
             st.warning("Source video unavailable for interactive review.")
