@@ -68,8 +68,15 @@ class AnnotationLog:
     def append(self, event: Mapping[str, Any]) -> dict[str, Any]:
         if event.get("schema_version") != SCHEMA_ANNOTATION_EVENT:
             raise GoldenClipError("annotation event schema_version mismatch")
-        if "interval" not in event or not isinstance(event["interval"], Mapping):
-            raise GoldenClipError("annotation event requires interval mapping")
+        action = str(event.get("action") or "")
+        # Pilot / incomplete qualification events may omit interval payload.
+        interval_optional = action in {
+            "INCOMPLETE_UI_FREEZE_EVENT",
+            "QUALIFY_INCOMPLETE",
+        }
+        if not interval_optional:
+            if "interval" not in event or not isinstance(event["interval"], Mapping):
+                raise GoldenClipError("annotation event requires interval mapping")
         payload = json.dumps(dict(event), ensure_ascii=False, allow_nan=False)
         with self.path.open("a+", encoding="utf-8") as handle:
             self._lock(handle)

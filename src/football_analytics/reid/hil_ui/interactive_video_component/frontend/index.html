@@ -111,6 +111,9 @@
     let lastSentClick = null;
     let lockedSelectionFrame = null;
     let lostPauseSent = false;
+    let lastClickFingerprint = null;
+    let lastClickAtMs = 0;
+    let eventSeq = 0;
 
     function currentFrame() {
       const fps = args.fps || 30;
@@ -216,26 +219,41 @@
       const y = ev.clientY - rect.top;
       const fi = currentFrame();
       const hit = hitTest(x, y);
-      // Always pause on click so selection is not lost while video advances
+      // Always pause on click in-browser (do not wait for Streamlit rerun)
       try { vid.pause(); } catch (e) {}
+      const now = Date.now();
       if (!hit) {
         Streamlit.setComponentValue({
           type: "bbox_miss",
+          event_uuid: `miss_${now}_${++eventSeq}`,
           frame_index: fi,
+          timestamp: vid.currentTime,
           time_seconds: vid.currentTime,
           paused: true,
         });
         return;
       }
+      const fp = `${fi}|${hit.raw_track_id}|${hit.segment_id}|${JSON.stringify(hit.bbox_xyxy)}`;
+      // Debounce duplicate click events within 400ms
+      if (fp === lastClickFingerprint && (now - lastClickAtMs) < 400) {
+        sel.textContent =
+          `Selected · segment ${hit.segment_id} · raw_track ${hit.raw_track_id} · frame ${fi} · PAUSED (debounced)`;
+        return;
+      }
+      lastClickFingerprint = fp;
+      lastClickAtMs = now;
       const payload = {
         type: "bbox_click",
+        event_uuid: `clk_${now}_${++eventSeq}`,
         frame_index: fi,
+        timestamp: vid.currentTime,
         time_seconds: vid.currentTime,
+        detection_id: hit.detection_id || null,
         raw_track_id: String(hit.raw_track_id),
         segment_id: String(hit.segment_id),
         candidate_id: hit.candidate_id || null,
         bbox_xyxy: hit.bbox_xyxy,
-        external_candidate_code: hit.external_candidate_code || null,
+        // Keep payload bounded: no video / no full manifest
         paused: true,
         pause_reason: "bbox_click",
       };
@@ -281,9 +299,13 @@
       args = Object.assign({}, args, a);
       nativeW = Number(args.video_width || nativeW);
       nativeH = Number(args.video_height || nativeH);
-      if (a.video_data_url && vid.src !== a.video_data_url) {
-        vid.src = a.video_data_url;
-        vid.load();
+      // Only (re)load video when a non-empty NEW data URL is provided.
+      // Empty/null means "keep current src" to avoid freeze on every Streamlit rerun.
+      if (a.video_data_url) {
+        if (vid.src !== a.video_data_url) {
+          vid.src = a.video_data_url;
+          vid.load();
+        }
       }
       if (a.selected_raw_track_id) {
         sel.textContent =

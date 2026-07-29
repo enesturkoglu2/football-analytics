@@ -239,6 +239,14 @@ def rebuild_gt_from_events(
             gt["accepted_at"] = ev.get("created_at")
             gt["accepted_by"] = ev.get("reviewer")
             revision += 1
+        elif action in {
+            "PILOT_FAILURE_WINDOW_LABEL",
+            "INCOMPLETE_UI_FREEZE_EVENT",
+            "QUALIFY_INCOMPLETE",
+        }:
+            # Pilot / incomplete events are stored append-only but do not mutate
+            # full-coverage ground-truth intervals.
+            continue
         else:
             raise GoldenClipError(f"unknown annotation action: {action!r}")
 
