@@ -172,7 +172,7 @@ class PilotSchemaTests(unittest.TestCase):
             [
                 "RAW_TRACK_FRAGMENT_SAME_TARGET",
                 "RAW_TRACK_FRAGMENT_SAME_TARGET",
-                "SHORT_OCCLUSION",
+                "SHORT_OCCLUSION_FRAGMENTATION",
             ]
         ):
             events.append(
@@ -185,6 +185,7 @@ class PilotSchemaTests(unittest.TestCase):
                     match_id="m",
                     analysis_run_id="r",
                     target_id="target_001",
+                    selected_next_raw_track_id="2",
                 )
             )
         summary = summarize_pilot_labels(events)
@@ -212,9 +213,10 @@ class NoContaminationTests(unittest.TestCase):
         app = (
             _SRC / "football_analytics/reid/golden_clip/streamlit_app.py"
         ).read_text(encoding="utf-8")
-        self.assertIn("gt_pilot_interactive_stable", app)
-        self.assertIn("processed_event_uuids", app)
-        self.assertIn("fallback", app)
+        # R1.2: static is default; interactive only under Advanced/Experimental
+        self.assertIn("gt_r12_enrollment_click_stable", app)
+        self.assertIn("submitted_event_uuids", app)
+        self.assertIn("Advanced / Experimental Interactive Mode", app)
         self.assertNotIn("observations_for_component(dens_full)", app)
 
 
@@ -253,13 +255,13 @@ class LatencyAndKeyContractTests(unittest.TestCase):
         app = (
             _SRC / "football_analytics/reid/golden_clip/streamlit_app.py"
         ).read_text(encoding="utf-8")
-        self.assertIn("last_click_latency_ms", app)
-        self.assertIn('key="gt_pilot_interactive_stable"', app)
+        self.assertIn("selection_latency_ms", app)
+        self.assertIn('key="gt_r12_enrollment_click_stable"', app)
         self.assertIn("st.cache_data", app)
-        self.assertIn("processed_event_uuids", app)
-        self.assertIn("video_url_sent", app)
+        self.assertIn("submitted_event_uuids", app)
         self.assertIn("TARGET_FAILURE_WINDOW_PILOT", app)
-        self.assertIn("fallback", app)
+        self.assertIn("st.form", app)
+        self.assertIn("st.video", app)
 
 
 if __name__ == "__main__":

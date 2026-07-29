@@ -13,13 +13,22 @@ COVERAGE_SCOPE = "FAILURE_WINDOW_PILOT"
 
 PILOT_LABELS = frozenset(
     {
-        "CORRECT_TARGET_CONTINUATION",
         "RAW_TRACK_FRAGMENT_SAME_TARGET",
+        "SHORT_OCCLUSION_FRAGMENTATION",
         "WRONG_PLAYER_ID_SWITCH",
         "TARGET_VISIBLE_BUT_DETECTION_MISSED",
-        "SHORT_OCCLUSION",
         "OUT_OF_FRAME",
+        "BORDER_EXIT_REENTRY",
         "UNCERTAIN",
+    }
+)
+
+# Candidate continuation selection required for these labels (R1.2)
+CANDIDATE_REQUIRED_LABELS = frozenset(
+    {
+        "RAW_TRACK_FRAGMENT_SAME_TARGET",
+        "SHORT_OCCLUSION_FRAGMENTATION",
+        "BORDER_EXIT_REENTRY",
     }
 )
 
@@ -70,12 +79,21 @@ def build_pilot_label_event(
     target_id: str,
     selected_next_raw_track_id: str | None = None,
     comment: str = "",
+    event_uuid: str | None = None,
+    failure_window_id: str | None = None,
+    ui_mode: str = "static",
 ) -> dict[str, Any]:
     if label not in PILOT_LABELS:
         raise ValueError(f"invalid pilot label: {label}")
+    if label in CANDIDATE_REQUIRED_LABELS and not selected_next_raw_track_id:
+        raise ValueError(f"label {label} requires selected continuation candidate")
+    wid = failure_window_id or window.get("window_id") or window.get("event_id")
+    start_frame = int(window.get("start_frame") or window.get("track_end_frame") or 0)
+    end_frame = int(window.get("end_frame") or start_frame)
     return {
         "schema_version": "target_gt_annotation_event_v1",
         "event_id": f"gtevt_{uuid.uuid4().hex[:12]}",
+        "event_uuid": event_uuid or f"euuid_{uuid.uuid4().hex[:16]}",
         "action": "PILOT_FAILURE_WINDOW_LABEL",
         "created_at": _utc(),
         "reviewer": reviewer,
@@ -86,12 +104,14 @@ def build_pilot_label_event(
         "target_id": target_id,
         "comment": comment,
         "coverage_scope": COVERAGE_SCOPE,
+        "ui_mode": ui_mode,
+        "failure_window_id": wid,
         "interval": {
             "annotation_id": f"ann_{uuid.uuid4().hex[:12]}",
-            "start_frame": int(window["start_frame"]),
-            "end_frame": int(window["end_frame"]),
-            "start_time": float(window.get("start_time") or 0.0),
-            "end_time": float(window.get("end_time") or 0.0),
+            "start_frame": start_frame,
+            "end_frame": end_frame,
+            "start_time": float(window.get("start_time") or window.get("track_end_time") or 0.0),
+            "end_time": float(window.get("end_time") or window.get("track_end_time") or 0.0),
             "target_state": "TARGET_UNCERTAIN",
             "associated_detection_ids": [],
             "associated_raw_track_ids": [
@@ -109,15 +129,17 @@ def build_pilot_label_event(
             "provenance": {
                 "coverage_scope": COVERAGE_SCOPE,
                 "pilot_label": label,
-                "window_id": window.get("window_id"),
+                "window_id": wid,
                 "selected_next_raw_track_id": selected_next_raw_track_id,
                 "incomplete_ui_freeze_event": False,
+                "ui_mode": ui_mode,
             },
         },
         "pilot": {
             "label": label,
             "window": dict(window),
             "selected_next_raw_track_id": selected_next_raw_track_id,
+            "failure_window_id": wid,
         },
     }
 
@@ -347,15 +369,15 @@ def summarize_pilot_labels(events: Sequence[Mapping[str, Any]]) -> dict[str, Any
                     "kind": w.get("kind"),
                 }
             )
-    # map to taxonomy names used by R0/R1
+    # map to taxonomy names used by R0/R1 / R1.2
     taxonomy = {
         "RAW_TRACK_ID_FRAGMENTATION_WITH_CONTINUOUS_DETECTION": {
             "count": counts["RAW_TRACK_FRAGMENT_SAME_TARGET"],
             "representative_timestamps": reps["RAW_TRACK_FRAGMENT_SAME_TARGET"],
         },
         "SHORT_OCCLUSION_FRAGMENTATION": {
-            "count": counts["SHORT_OCCLUSION"],
-            "representative_timestamps": reps["SHORT_OCCLUSION"],
+            "count": counts["SHORT_OCCLUSION_FRAGMENTATION"],
+            "representative_timestamps": reps["SHORT_OCCLUSION_FRAGMENTATION"],
         },
         "WRONG_PLAYER_ID_SWITCH": {
             "count": counts["WRONG_PLAYER_ID_SWITCH"],
@@ -369,21 +391,29 @@ def summarize_pilot_labels(events: Sequence[Mapping[str, Any]]) -> dict[str, Any
             "count": counts["OUT_OF_FRAME"],
             "representative_timestamps": reps["OUT_OF_FRAME"],
         },
+        "BORDER_EXIT_REENTRY": {
+            "count": counts["BORDER_EXIT_REENTRY"],
+            "representative_timestamps": reps["BORDER_EXIT_REENTRY"],
+        },
         "UNCERTAIN": {
             "count": counts["UNCERTAIN"],
             "representative_timestamps": reps["UNCERTAIN"],
         },
-        "CORRECT_TARGET_CONTINUATION": {
-            "count": counts["CORRECT_TARGET_CONTINUATION"],
-            "representative_timestamps": reps["CORRECT_TARGET_CONTINUATION"],
-        },
     }
     labeled = sum(counts.values())
+    continuation_ids = []
+    for ev in events:
+        if ev.get("action") != "PILOT_FAILURE_WINDOW_LABEL":
+            continue
+        tid = (ev.get("pilot") or {}).get("selected_next_raw_track_id")
+        if tid and tid not in continuation_ids:
+            continuation_ids.append(str(tid))
     return {
         "coverage_scope": COVERAGE_SCOPE,
         "labeled_window_count": labeled,
         "label_counts": counts,
         "taxonomy": taxonomy,
+        "selected_continuation_track_ids": continuation_ids,
         "available_old_identity_signals": [
             "quality",
             "kit",
@@ -413,24 +443,34 @@ def choose_pilot_next_gate(summary: Mapping[str, Any]) -> dict[str, Any]:
     occ = int((tax.get("SHORT_OCCLUSION_FRAGMENTATION") or {}).get("count") or 0)
     miss = int((tax.get("DETECTION_MISS") or {}).get("count") or 0)
     wrong = int((tax.get("WRONG_PLAYER_ID_SWITCH") or {}).get("count") or 0)
-    if miss >= max(frag, occ, wrong) and miss > 0:
-        gate = "TARGET_DETECTION_RECALL_REMEDIATION"
-        rationale = "Hedef görünürken detection miss baskın."
-    elif occ > frag and occ > 0:
-        gate = "TARGET_CONDITIONED_SHORT_OCCLUSION_BRIDGE"
-        rationale = "Kısa örtüşme / kısa boşluk baskın."
-    elif frag > 0:
-        gate = "EXISTING_TRACKLET_STITCHING_INTEGRATION"
-        rationale = "Detection devam ederken raw_track_id fragmentation baskın."
-    elif wrong > 0:
+    border = int((tax.get("BORDER_EXIT_REENTRY") or {}).get("count") or 0)
+    # Majority / dominant class (R1.2 exact gate selection)
+    scores = {
+        "EXISTING_TRACKLET_STITCHING_INTEGRATION": frag,
+        "TARGET_CONDITIONED_SHORT_OCCLUSION_BRIDGE": occ,
+        "TARGET_DETECTION_RECALL_REMEDIATION": miss,
+        "TARGET_ID_STATE_AND_OBSERVATION_LAYER": wrong + border,
+    }
+    best_gate = max(scores, key=lambda k: scores[k])
+    if scores[best_gate] <= 0:
         gate = "TARGET_ID_STATE_AND_OBSERVATION_LAYER"
-        rationale = "Yanlış oyuncu ID switch; kalıcı target_id observation katmanı gerekli."
+        rationale = "Pilot etiketler baskın sınıf göstermiyor; state katmanı güvenli kapı."
+    elif best_gate == "EXISTING_TRACKLET_STITCHING_INTEGRATION":
+        gate = best_gate
+        rationale = "RAW_TRACK_FRAGMENT_SAME_TARGET baskın."
+    elif best_gate == "TARGET_CONDITIONED_SHORT_OCCLUSION_BRIDGE":
+        gate = best_gate
+        rationale = "SHORT_OCCLUSION_FRAGMENTATION baskın."
+    elif best_gate == "TARGET_DETECTION_RECALL_REMEDIATION":
+        gate = best_gate
+        rationale = "TARGET_VISIBLE_BUT_DETECTION_MISSED baskın."
     else:
         gate = "TARGET_ID_STATE_AND_OBSERVATION_LAYER"
-        rationale = "Pilot etiketler stitching/detection baskını göstermiyor; state katmanı güvenli kapı."
+        rationale = "Karışık / wrong-switch / border; persistent target state katmanı."
     return {
         "exact_next_gate": gate,
         "rationale_tr": rationale,
         "labeled_window_count": labeled,
         "single_gate_only": True,
+        "class_scores": scores,
     }
